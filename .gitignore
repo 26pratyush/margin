@@ -1,0 +1,27 @@
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/settings.json
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Local application data: never commit real financial records
+data/local/
+*.db
+*.sqlite
+*.sqlite3
+
+# Site build output
+site/dist/
+site/build/

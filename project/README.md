@@ -1,0 +1,16 @@
+# Margin project management
+
+This directory contains versioned planning resources that support the GitHub Issues and Project. GitHub remains the interactive source of truth; these files provide durable context for future implementation chats.
+
+## Resources
+
+- [Roadmap](ROADMAP.md)
+- [Project tracking setup](TRACKING.md)
+- [Dependency waves](DEPENDENCIES.md)
+- [Label definitions](LABELS.md)
+- [Epic index](epics/EPIC-001-foundation.md)
+- [Task briefs](tasks/README.md)
+
+## How to use these files
+
+When an issue is created on GitHub, link it to the relevant epic and reference the matching task brief. If the issue changes scope or dependencies, update both GitHub and these planning files.
