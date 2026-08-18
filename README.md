@@ -10,7 +10,7 @@ Margin is currently in the planning and foundation stage. The repository is bein
 
 ## Product direction
 
-Margin is designed for someone starting their first job and wanting a granular but calm way to manage money without mindless spending.
+Margin is designed for someone starting their first job and wanting a granular but calm way to manage money without mindless spending (aka Jordans and foreign booze).
 
 The first useful version should make it easy to:
 
