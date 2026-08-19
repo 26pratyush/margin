@@ -1,0 +1,61 @@
+import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import test from 'node:test'
+import { openStorage } from './storage.mjs'
+import { ValidationError, createSyntheticDataset } from './validation.mjs'
+
+async function withStorage(callback) {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-test-'))
+  const storage = await openStorage({ dataDirectory: directory })
+  try {
+    await callback(storage)
+  } finally {
+    storage.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+}
+
+test('uses a platform-specific default directory without changing the database contract', () => {
+  assert.match(path.basename(path.dirname('/Users/example/Library/Application Support/Margin/margin.sqlite')), /Margin/)
+})
+
+test('persists synthetic records after closing and reopening the service', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-restart-'))
+  const first = await openStorage({ dataDirectory: directory })
+  first.replaceDataset(createSyntheticDataset())
+  first.close()
+
+  const second = await openStorage({ dataDirectory: directory })
+  try {
+    const dataset = second.getDataset()
+    assert.equal(dataset.entries.length, 2)
+    assert.equal(dataset.commitments.length, 1)
+  } finally {
+    second.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('rejects an invalid restore before changing existing data', async () => {
+  await withStorage(async (storage) => {
+    storage.replaceDataset(createSyntheticDataset())
+    const before = storage.exportDataset()
+    assert.throws(
+      () => storage.replaceDataset({ ...before, entries: [{ id: 'bad', amountMinor: -1 }] }),
+      ValidationError,
+    )
+    assert.deepEqual(storage.getDataset().entries, before.entries)
+  })
+})
+
+test('reset clears Margin records without deleting the configured data directory', async () => {
+  await withStorage(async (storage) => {
+    storage.replaceDataset(createSyntheticDataset())
+    const reset = storage.reset()
+    assert.equal(reset.entries.length, 0)
+    assert.equal(reset.commitments.length, 0)
+    assert.equal(storage.dataDirectory.startsWith(os.tmpdir()), true)
+  })
+})

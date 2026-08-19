@@ -1,8 +1,8 @@
-# ADR-001 — Browser-local application stack for v0.1
+# ADR-001 — Browser-local application stack with loopback SQLite for v0.1
 
-- Status: Accepted
+- Status: Accepted, revised by MARGIN-010
 - Date: 2026-08-19
-- Issue: [MARGIN-002](https://github.com/26pratyush/margin/issues/3)
+- Issue: [MARGIN-002](https://github.com/26pratyush/margin/issues/3), revised by [MARGIN-010](https://github.com/26pratyush/margin/issues/15)
 
 ## Decision
 
@@ -12,30 +12,35 @@ Margin v0.1 will be a browser-based local single-page application served from `l
 | --- | --- |
 | UI/runtime | React with TypeScript, built and served by Vite |
 | Toolchain | Node.js 24 LTS with npm and a committed lockfile |
-| App shape | Static client application; no hosted API, account system, or cloud database |
-| Persistence | IndexedDB through Dexie, accessed behind a typed repository interface |
-| Reactive reads | Dexie live queries through `dexie-react-hooks` where screens need them |
+| App shape | Browser UI plus a loopback-only local service; no hosted API, account system, or cloud database |
+| Persistence | File-backed SQLite through the local Node service, accessed behind a typed repository interface |
+| Reactive reads | HTTP JSON reads from the local service; domain modules remain framework-independent |
 | Domain logic | Framework-independent TypeScript modules outside React components |
 | Unit/integration tests | Vitest with React Testing Library once implementation starts |
 | Browser smoke tests | Playwright after the first runnable shell exists |
 | Packaging | Source checkout plus npm scripts; optional static build and later container image |
 | Backup | Versioned JSON export as the canonical backup, CSV export for interoperability |
 
-The canonical local URL for development is `http://localhost:5173`. Browser storage is origin-scoped, so changing the host, scheme, or port creates a separate local data boundary. The app must make that boundary visible in its backup and recovery guidance.
+The canonical local URL for development is `http://localhost:5173`; the service binds to `127.0.0.1:4318`. The SQLite file lives outside the repository in an OS-specific application-data directory, with `MARGIN_DATA_DIR` available as an absolute-path override.
 
 ## Why this fits Margin
 
 - A browser app is platform-independent, easy to inspect, and can be run on macOS, Windows, and Linux with the same source and commands.
-- Vite produces a static build without requiring a server runtime for the finance application. React provides a familiar component model while TypeScript keeps domain and data contracts explicit.
-- IndexedDB is native browser persistence and works offline. Dexie supplies schema declarations, versioned upgrades, transactions, and a small query API without adding a backend.
-- Keeping the domain layer and persistence behind interfaces preserves an escape hatch for a desktop wrapper or file-backed adapter later without making one necessary now.
+- Vite produces the browser build and a small Node service provides the local persistence boundary. React provides a familiar component model while TypeScript keeps domain and data contracts explicit.
+- SQLite is file-backed, transactional, inspectable, and independent of browser profiles. The Node service keeps OS-specific paths and database details out of the browser UI.
+- The implementation uses Node.js's built-in `node:sqlite` module, so the native setup adds no SQLite npm package, compiler toolchain, or Docker requirement.
+- Keeping the domain layer and persistence behind interfaces preserves an escape hatch for a desktop wrapper or another adapter later without making one necessary now.
 - The application can be deployed as local source/build artifacts while the public GitHub Pages site remains a separate product/demo site.
 
 ## Options considered
 
 ### Browser SPA with React, Vite, TypeScript, and IndexedDB
 
-Selected. It has the smallest operational footprint, supports static hosting and local execution, and satisfies the local-first boundary. Its main risk is that browser storage is user- and origin-managed rather than a directly visible file, so backup/export is a required product feature rather than an afterthought.
+Selected for the UI, but not for the primary ledger. Browser storage is user- and origin-managed, so it cannot meet the requirement that records survive cache clearing and browser changes.
+
+### Browser UI with a loopback Node service and file-backed SQLite
+
+Selected for persistence. It keeps the UI browser-based and cross-platform while moving the durable ledger to a local file. Native npm setup remains the default; Docker is optional packaging and development tooling.
 
 ### Svelte or Vue browser SPA
 
@@ -53,19 +58,18 @@ Rejected. It conflicts with the local-first boundary, introduces accounts and de
 
 - `localStorage` is rejected because it is synchronous, not suited to relational/query-heavy records, and too fragile for the application’s data boundary.
 - SQLite compiled to WebAssembly is deferred. It may become useful if SQL queries or file-like database portability become necessary, but it adds a WASM/OPFS compatibility and packaging layer that v0.1 does not need.
-- Raw IndexedDB is the underlying browser primitive, but Dexie is selected to make schema upgrades, transactions, and typed access safer and easier to test.
+- Raw IndexedDB is deferred to non-primary browser preferences or a future offline fallback; it is not the durable source of truth.
 
 ## Persistence and backup contract
 
-The database adapter will expose domain-level operations rather than leaking Dexie tables into UI code. MARGIN-003 defines the entities and balance rules; MARGIN-006 implements the adapter and backup boundary.
+The database adapter will expose domain-level operations rather than leaking SQLite tables or HTTP details into UI code. MARGIN-003 defines the entities and balance rules; MARGIN-006 implements the adapter and backup boundary.
 
 - The database schema is versioned independently from the export format.
 - JSON is the lossless, versioned backup format. It should include a format identifier, schema version, export timestamp, app version, and validated domain records.
 - CSV is a secondary, human-readable export for selected records and interoperability; it is not the lossless restore format.
 - Import must parse and validate the complete file before writing anything. v0.1 restore is an explicit replace operation after confirmation, with an export of the current dataset offered first.
 - Reset is an explicit destructive action that deletes the local database only after confirmation.
-- The app may request persistent browser storage with `navigator.storage.persist()`, but must not promise that browser storage alone is a backup.
-- Private/incognito browsing, browser data clearing, quota pressure, and origin changes must be called out in the backup guidance.
+- Browser cache clearing and changing browser profiles do not remove the primary SQLite file, but moving to another machine still requires importing a JSON backup.
 - No automatic cloud sync or telemetry is part of this decision.
 
 ## Fresh-clone and packaging path
@@ -79,7 +83,7 @@ npm run build
 npm run preview
 ```
 
-The app is not packaged as a desktop executable for v0.1. Docker/Podman may later provide a reproducible development or CI environment, but native npm setup remains the primary path. A container image, if eventually useful, is a packaging artifact and must never include local databases, credentials, or personal records.
+The app is not packaged as a desktop executable for v0.1. Native npm setup remains the primary path. Docker/Podman may later provide reproducible development or CI environments, but a container volume must not be the only recovery path and images must never include local databases, credentials, or personal records.
 
 ## References
 
