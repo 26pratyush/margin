@@ -71,16 +71,17 @@ At any point in a pay period, the user should be able to answer:
 - The static product/demo site will deploy from `site/` to GitHub Pages through GitHub Actions; the finance app has no hosted deployment boundary.
 - Containers are optional local development and packaging tooling. Whether the selected runtime benefits from Docker or Podman is decided in `MARGIN-002` and implemented, if needed, in `MARGIN-004`.
 - Versioned releases use Git tags and GitHub Releases. Public container images are optional and must contain no personal data.
-- No application framework or database has been selected yet.
+- The v0.1 finance app is a browser-based local SPA served from `localhost`.
+- The v0.1 UI stack is React, TypeScript, and Vite on Node.js 24 LTS with npm.
+- Local persistence uses IndexedDB through Dexie behind a typed repository interface; there is no sync or hosted database.
+- JSON is the lossless backup format and CSV is a secondary interoperability export.
 
 ## Open decisions
 
-- Exact application stack and local runtime.
-- Local persistence technology.
-- Whether the local app runs in a browser, desktop shell, or another local wrapper.
 - Currency and locale defaults.
 - License.
 - First release scope after the foundation vertical slice.
+- Optional PWA installation or desktop packaging if browser constraints justify it.
 
 ## Working rule for future chats
 

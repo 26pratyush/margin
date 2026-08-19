@@ -4,7 +4,7 @@
 
 The Margin finance application is developed and used locally. It is not deployed to GitHub Pages and does not need a hosted API or hosted database for the initial product.
 
-The local setup instructions will be added once the application stack is selected.
+The v0.1 application is a browser SPA served locally from `http://localhost:5173`. The local setup instructions and package scripts will be implemented in MARGIN-004.
 
 ## GitHub Pages product website
 
@@ -32,6 +32,12 @@ Containers are optional. MARGIN-002 decides whether the selected local runtime b
 - Docker Desktop is optional for personal or non-commercial open-source development; Podman is an open-source-compatible alternative.
 - Local data must use an ignored path or local volume and must never be copied into an image.
 - No container is deployed as a hosted finance service.
+
+## Local packaging and backup
+
+The primary package is a source checkout with a committed npm lockfile. A local user runs the app with the documented npm command; no account, cloud service, or platform-specific installer is required for v0.1.
+
+The app stores records in browser-managed IndexedDB and provides an explicit versioned JSON export/import path. CSV is available as a secondary export. Browser storage is not treated as a backup because users can clear site data, use private browsing, change origins, or encounter quota eviction.
 
 ## Release rule
 

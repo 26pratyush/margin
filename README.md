@@ -53,6 +53,7 @@ margin/
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development workflow](docs/GITHUB_WORKFLOW.md)
 - [Deployment boundary](docs/DEPLOYMENT.md)
+- [Stack decision](docs/decisions/ADR-001-local-browser-stack.md)
 - [GitHub bootstrap checklist](docs/GITHUB_BOOTSTRAP.md)
 - [Roadmap](project/ROADMAP.md)
 - [Project tracking setup](project/TRACKING.md)

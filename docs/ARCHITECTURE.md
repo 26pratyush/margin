@@ -16,17 +16,28 @@ GitHub Pages ── static product/demo website only
 
 The product website is not the finance application. It must not call a Margin API or connect to the user's financial data.
 
-## Proposed application shape
+## Selected v0.1 application shape
 
-Start with a modular local application rather than distributed services:
+The finance app is a modular browser application rather than a distributed service:
 
-- Presentation layer for the dashboard and entry flows.
-- Domain layer for balance, period, category, and commitment calculations.
-- Persistence layer behind a small interface.
-- Export/import boundary for backup and portability.
-- Test fixtures using synthetic financial records.
+```text
+Browser at localhost
+        ↓
+React + TypeScript presentation
+        ↓
+Framework-independent domain modules
+        ↓
+Typed persistence/repository interface
+        ↓
+Dexie → IndexedDB
+```
 
-The exact framework, runtime, and persistence technology are deliberately left open for `MARGIN-002` and `MARGIN-003`.
+- Vite owns development, bundling, and the static production build.
+- Node.js 24 LTS and npm provide the development toolchain.
+- Export/import is a separate boundary for backup and portability.
+- Test fixtures use synthetic financial records.
+
+The domain layer must not import React or Dexie. UI components must not calculate balances or write directly to IndexedDB.
 
 ## Domain model direction
 
@@ -47,6 +58,8 @@ The model should preserve dates and amounts as first-class values. Calculation l
 - Import should validate records before writing them.
 - Destructive operations should have clear confirmation and recovery expectations.
 - Screenshots and demo fixtures must use synthetic values.
+- Browser storage is origin-scoped and may be cleared or evicted; JSON backup is the lossless recovery path.
+- The app should use a stable localhost origin and explain that changing the port or browser creates a separate data boundary.
 
 ## Deployment and container boundary
 

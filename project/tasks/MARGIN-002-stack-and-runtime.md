@@ -4,6 +4,8 @@
 
 Choose a pragmatic technology path for a local-first app that is pleasant to develop, test, and maintain.
 
+The accepted decision record is [`docs/decisions/ADR-001-local-browser-stack.md`](../../docs/decisions/ADR-001-local-browser-stack.md).
+
 ## Questions to answer
 
 - Is the app a browser-based local app, a desktop wrapper, or another local runtime?
