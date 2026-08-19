@@ -6,7 +6,7 @@ Margin is a local-first personal finance tracker for understanding where money g
 
 ## Project status
 
-Margin is currently in the planning and foundation stage. The repository is being prepared before application implementation begins.
+Margin is in the foundation stage. The local application scaffold is now runnable; the persistence and first product flow are being built in follow-up issues.
 
 ## Product direction
 
@@ -61,6 +61,31 @@ margin/
 - [First epic](project/epics/EPIC-001-foundation.md)
 - [Wiki-ready pages](wiki/Home.md)
 
+## Local setup
+
+The finance application runs locally in a browser. Use Node.js 24 LTS and npm; `.node-version` records the preferred major version and the committed lockfile keeps dependencies reproducible.
+
+From a fresh checkout:
+
+```bash
+npm ci
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). The development server uses a stable localhost origin because browser storage is scoped to the origin.
+
+Useful commands:
+
+```bash
+npm run check        # TypeScript validation
+npm run build        # Static production build
+npm run preview      # Preview the production build locally
+npm run demo:seed    # Create synthetic demo data
+npm run demo:reset   # Remove only the generated synthetic demo data
+```
+
+After `npm run demo:seed`, open [http://localhost:5173/?demo=1](http://localhost:5173/?demo=1) to verify that synthetic entries load. Demo data is generated under an ignored path and is not a backup or a substitute for the IndexedDB persistence boundary planned in MARGIN-006.
+
 ## Development workflow
 
 Work should generally follow this path:
@@ -73,7 +98,7 @@ Work should generally follow this path:
 6. Run local checks and review the change.
 7. Merge into `main` only when the issue's acceptance criteria are met.
 
-The v0.1 application stack and local persistence decision are recorded in the [stack decision](docs/decisions/ADR-001-local-browser-stack.md) and [domain model decision](docs/decisions/ADR-002-domain-model-and-balance-rules.md). Implementation commands will be added in MARGIN-004.
+The v0.1 application stack and local persistence decision are recorded in the [stack decision](docs/decisions/ADR-001-local-browser-stack.md) and [domain model decision](docs/decisions/ADR-002-domain-model-and-balance-rules.md).
 
 ## Delivery and release boundary
 

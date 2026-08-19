@@ -1,0 +1,39 @@
+{
+  "format": "margin-demo",
+  "schemaVersion": 1,
+  "currency": "INR",
+  "entries": [
+    {
+      "id": "demo-salary-2026-08",
+      "type": "income",
+      "amountMinor": 12500000,
+      "occurredOn": "2026-08-01",
+      "note": "Synthetic monthly salary"
+    },
+    {
+      "id": "demo-rent-2026-08",
+      "type": "expense",
+      "amountMinor": 3500000,
+      "occurredOn": "2026-08-03",
+      "note": "Synthetic housing expense"
+    },
+    {
+      "id": "demo-sip-2026-08",
+      "type": "investment",
+      "amountMinor": 1000000,
+      "occurredOn": "2026-08-05",
+      "note": "Synthetic investment contribution"
+    }
+  ],
+  "commitments": [
+    {
+      "id": "demo-commitment-phone",
+      "kind": "purchase",
+      "name": "Synthetic future purchase",
+      "plannedAmountMinor": 2500000,
+      "dueOn": "2026-09-15",
+      "status": "planned",
+      "linkedEntryIds": []
+    }
+  ]
+}

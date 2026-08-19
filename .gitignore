@@ -25,3 +25,6 @@ data/local/
 # Site build output
 site/dist/
 site/build/
+
+# Generated synthetic demo payload; source fixture is tracked separately
+app/public/demo-data.json

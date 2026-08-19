@@ -1,0 +1,23 @@
+{
+  "name": "margin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local-first personal finance tracker.",
+  "type": "module",
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "app"
+  ],
+  "scripts": {
+    "dev": "npm --workspace app run dev",
+    "build": "npm --workspace app run build",
+    "check": "npm --workspace app run check",
+    "preview": "npm --workspace app run preview",
+    "demo:seed": "node scripts/demo.mjs seed",
+    "demo:reset": "node scripts/demo.mjs reset",
+    "demo:status": "node scripts/demo.mjs status"
+  }
+}

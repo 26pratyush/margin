@@ -13,11 +13,21 @@ This directory contains the planned local-first finance application.
 
 The app runs from a stable `http://localhost:5173` origin and has no hosted backend or dependency on the product website. Browser storage is local to that origin, so export and restore are part of the product boundary.
 
-MARGIN-004 will add the actual package configuration and canonical commands. The intended setup is:
+The repository root owns the npm workspace and canonical commands. From the repository root:
 
 ```bash
 npm ci
 npm run dev
 ```
 
-Build and preview commands will be documented with the scaffold. Desktop wrappers and containers remain optional follow-up packaging paths.
+The app is served at `http://localhost:5173`. Additional commands are:
+
+```bash
+npm run check
+npm run build
+npm run preview
+npm run demo:seed
+npm run demo:reset
+```
+
+The demo commands use synthetic records only. They create or remove the explicitly ignored `app/public/demo-data.json` file; they do not touch browser persistence or unrelated files. Dexie/IndexedDB persistence and its reset flow belong to MARGIN-006. Desktop wrappers and containers remain optional follow-up packaging paths.
