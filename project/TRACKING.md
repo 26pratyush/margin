@@ -2,6 +2,8 @@
 
 Create one GitHub Project named `Margin — Product Development` and connect the repository to it.
 
+The project has been created for `26pratyush/margin`, and the initial Epic and child task issues are in Backlog. GitHub remains the interactive source of truth; this file defines the durable field, view, and workflow conventions.
+
 ## Recommended fields
 
 | Field | Values or purpose |
@@ -24,6 +26,10 @@ Roadmap layout grouped by `Target release`, showing Epics and Features with targ
 ### Current wave
 
 Board layout filtered to the active `Wave`, grouped by `Status`.
+
+### Board
+
+Board layout containing active work grouped by `Status`.
 
 ### Backlog
 

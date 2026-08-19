@@ -18,4 +18,4 @@ Store local financial records behind a clear interface and establish the first b
 - Invalid records are rejected with understandable errors.
 - Reset behavior is explicit and safe.
 - A synthetic dataset can be exported or the format is documented for the next task.
-- No persistence path requires Render or another hosted service.
+- No persistence path requires GitHub Pages or another hosted service.

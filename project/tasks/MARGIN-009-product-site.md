@@ -20,5 +20,5 @@ Create a static, portfolio-quality website that explains Margin without running 
 - The site builds independently from `site/`.
 - It contains no API, database, or personal financial data.
 - Screenshots use synthetic or redacted values.
-- The Render deployment instructions are documented.
+- The GitHub Pages deployment instructions are documented.
 - The site links back to the repository and relevant project resources.

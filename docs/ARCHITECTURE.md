@@ -9,9 +9,9 @@ Margin application
    ↓
 Local persistence
 
-GitHub ── source, issues, PRs, project tracking, Wiki
+GitHub ── source, issues, PRs, project tracking, Wiki, releases
 
-Render ── static product/demo website only
+GitHub Pages ── static product/demo website only
 ```
 
 The product website is not the finance application. It must not call a Margin API or connect to the user's financial data.
@@ -47,3 +47,10 @@ The model should preserve dates and amounts as first-class values. Calculation l
 - Import should validate records before writing them.
 - Destructive operations should have clear confirmation and recovery expectations.
 - Screenshots and demo fixtures must use synthetic values.
+
+## Deployment and container boundary
+
+- The finance application remains local and has no hosted API or hosted database.
+- The static site is built independently from `site/` and published to GitHub Pages after it has a real build.
+- Docker or Podman may be used to make local development and CI reproducible, but containers must not move financial data into a hosted service.
+- Container images, if introduced later, are packaging artifacts only and must contain code, dependencies, and synthetic fixtures—not local databases, credentials, or user records.

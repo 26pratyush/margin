@@ -66,8 +66,11 @@ At any point in a pay period, the user should be able to answer:
 
 - The working app runs locally.
 - GitHub is the source of truth for code, documentation, issues, epics, and pull requests.
-- Render hosts only the static product/demo website.
+- GitHub Pages hosts only the static product/demo website.
 - The app and demo site live in separate top-level directories in one repository unless a later decision changes that.
+- The static product/demo site will deploy from `site/` to GitHub Pages through GitHub Actions; the finance app has no hosted deployment boundary.
+- Containers are optional local development and packaging tooling. Whether the selected runtime benefits from Docker or Podman is decided in `MARGIN-002` and implemented, if needed, in `MARGIN-004`.
+- Versioned releases use Git tags and GitHub Releases. Public container images are optional and must contain no personal data.
 - No application framework or database has been selected yet.
 
 ## Open decisions
