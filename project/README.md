@@ -11,6 +11,7 @@ This directory contains versioned planning resources that support the GitHub Iss
 - [Epic index](epics/EPIC-001-foundation.md)
 - [Task briefs](tasks/README.md)
 - [Stack decision](../docs/decisions/ADR-001-local-browser-stack.md)
+- [Domain model decision](../docs/decisions/ADR-002-domain-model-and-balance-rules.md)
 
 ## How to use these files
 

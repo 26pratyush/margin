@@ -41,15 +41,17 @@ The domain layer must not import React or Dexie. UI components must not calculat
 
 ## Domain model direction
 
-The first domain model is expected to include:
+The first domain model includes:
 
-- `IncomeEntry`
-- `ExpenseEntry`
+- `LedgerEntry` with income, expense, investment, refund, and adjustment types
 - `Category`
 - `Commitment`
+- `BalanceSnapshot`
 - `PeriodSummary`
 
-The model should preserve dates and amounts as first-class values. Calculation logic should not be hidden inside UI components.
+The model preserves local dates and integer minor-unit amounts as first-class values. Actual ledger entries and planned commitments are separate concepts. Reconciliation snapshots compare calculated actual cash with a real balance and create explicit adjustment entries for the difference.
+
+The calculation layer must expose actual closing balance and disposable balance separately. Disposable balance applies remaining commitment reservations after actual cash has been reconciled; it must never be used as the input to reconciliation.
 
 ## Data safety requirements
 
@@ -60,6 +62,7 @@ The model should preserve dates and amounts as first-class values. Calculation l
 - Screenshots and demo fixtures must use synthetic values.
 - Browser storage is origin-scoped and may be cleared or evicted; JSON backup is the lossless recovery path.
 - The app should use a stable localhost origin and explain that changing the port or browser creates a separate data boundary.
+- Reconciliation snapshots and their adjustment entries must be included in JSON backup/export so a restore preserves the user’s balance history.
 
 ## Deployment and container boundary
 

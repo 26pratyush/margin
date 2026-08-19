@@ -29,6 +29,7 @@ At any point in a pay period, the user should be able to answer:
 - **Calm visual language:** dark, minimalist, restrained, and readable; no neon gradients or decorative AI-dashboard styling.
 - **Inspectable decisions:** important product and architecture choices are documented.
 - **Safe by default:** synthetic data in the repository, explicit exports, and no accidental cloud dependency.
+- **Reconciled, not pretend-perfect:** the app records important activity and can sync its calculated actual balance to a user-entered real account balance without inventing individual small transactions.
 
 ## Product boundaries
 
@@ -58,7 +59,11 @@ At any point in a pay period, the user should be able to answer:
 
 - **Income:** money entering the tracked system, such as salary.
 - **Expense:** money already spent.
+- **Investment:** an actual debit for an investment contribution; it reduces cash but is reported separately from ordinary spending.
+- **Refund:** money returned from an expense or investment.
 - **Commitment:** money planned or reserved for a recurring obligation, such as an SIP or RD.
+- **Actual balance:** calculated cash after active credits, debits, and reconciliation adjustments, before planned commitments.
+- **Reconciliation:** a comparison between calculated actual balance and the real account balance entered by the user.
 - **Disposable balance:** income minus expenses and commitments for the selected period.
 - **Period:** a week, month, or custom date range used for summaries.
 
@@ -69,16 +74,18 @@ At any point in a pay period, the user should be able to answer:
 - GitHub Pages hosts only the static product/demo website.
 - The app and demo site live in separate top-level directories in one repository unless a later decision changes that.
 - The static product/demo site will deploy from `site/` to GitHub Pages through GitHub Actions; the finance app has no hosted deployment boundary.
-- Containers are optional local development and packaging tooling. Whether the selected runtime benefits from Docker or Podman is decided in `MARGIN-002` and implemented, if needed, in `MARGIN-004`.
+- Containers are optional local development and packaging tooling. The browser runtime is selected; any reproducible Docker or Podman setup belongs to `MARGIN-004`.
 - Versioned releases use Git tags and GitHub Releases. Public container images are optional and must contain no personal data.
 - The v0.1 finance app is a browser-based local SPA served from `localhost`.
 - The v0.1 UI stack is React, TypeScript, and Vite on Node.js 24 LTS with npm.
 - Local persistence uses IndexedDB through Dexie behind a typed repository interface; there is no sync or hosted database.
 - JSON is the lossless backup format and CSV is a secondary interoperability export.
+- The domain model separates actual ledger entries, planned commitments, and reconciliation snapshots.
+- Reconciliation compares real account balance to actual cash, then records a separate adjustment for untracked activity; commitments are applied afterward to derive disposable balance.
+- v0.1 uses one local ledger currency, defaulting to INR with two decimal places, and does not support FX conversion.
 
 ## Open decisions
 
-- Currency and locale defaults.
 - License.
 - First release scope after the foundation vertical slice.
 - Optional PWA installation or desktop packaging if browser constraints justify it.

@@ -15,7 +15,6 @@ The local app and static product site live in separate top-level directories so 
 ## Open decisions
 
 - License.
-- Currency and locale defaults.
 - Optional PWA installation or desktop packaging if browser constraints justify it.
 
 ## Delivery policy
@@ -31,3 +30,7 @@ The finance application runs as a React and TypeScript browser SPA built with Vi
 ## D-005 — IndexedDB with explicit export and restore
 
 Local records use IndexedDB through Dexie behind a persistence interface. JSON is the lossless backup format, CSV is a secondary export, and browser storage is never treated as the only backup.
+
+## D-006 — Reconciliation is an explicit adjustment
+
+Margin compares the real account balance to calculated actual cash, not disposable balance after commitments. The difference is recorded as a linked reconciliation adjustment so omitted small transactions are visible without being falsely reconstructed.
