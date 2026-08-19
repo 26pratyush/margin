@@ -1,8 +1,8 @@
 # ADR-001 — Browser-local application stack with loopback SQLite for v0.1
 
-- Status: Accepted
+- Status: Accepted, revised by MARGIN-010
 - Date: 2026-08-19
-- Issue: [MARGIN-002](https://github.com/26pratyush/margin/issues/3)
+- Issue: [MARGIN-002](https://github.com/26pratyush/margin/issues/3), revised by [MARGIN-010](https://github.com/26pratyush/margin/issues/15)
 
 ## Decision
 
@@ -28,6 +28,7 @@ The canonical local URL for development is `http://localhost:5173`; the service 
 - A browser app is platform-independent, easy to inspect, and can be run on macOS, Windows, and Linux with the same source and commands.
 - Vite produces the browser build and a small Node service provides the local persistence boundary. React provides a familiar component model while TypeScript keeps domain and data contracts explicit.
 - SQLite is file-backed, transactional, inspectable, and independent of browser profiles. The Node service keeps OS-specific paths and database details out of the browser UI.
+- The implementation uses Node.js's built-in `node:sqlite` module, so the native setup adds no SQLite npm package, compiler toolchain, or Docker requirement.
 - Keeping the domain layer and persistence behind interfaces preserves an escape hatch for a desktop wrapper or another adapter later without making one necessary now.
 - The application can be deployed as local source/build artifacts while the public GitHub Pages site remains a separate product/demo site.
 

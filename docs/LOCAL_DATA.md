@@ -2,6 +2,8 @@
 
 Margin keeps the browser as its product surface while storing the primary ledger in a loopback-only Node service backed by SQLite.
 
+The service uses Node.js's built-in `node:sqlite` module. Native npm setup therefore does not require a separate SQLite installation, native dependency compilation, or Docker.
+
 ```text
 Browser UI → 127.0.0.1:4318 → OS application-data directory → margin.sqlite
 ```
