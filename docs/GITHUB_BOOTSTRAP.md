@@ -18,18 +18,18 @@ If `origin` already exists, skip the first command.
 
 ## 2. Configure the repository
 
-- Keep the repository private until you are comfortable publishing the code and documentation.
+- Keep the repository public for the GitHub Free Pages and Actions path; never publish personal financial data, credentials, or secrets.
 - Set `main` as the default branch.
 - Enable Issues, Projects, and Wiki under repository settings.
 - Add the labels listed in `project/LABELS.md`.
 - Add milestones listed in `project/TRACKING.md`.
 - Protect `main` once Pull Requests and checks are in regular use.
 
-## 3. Create the GitHub Project
+## 3. Configure the GitHub Project
 
-Create `Margin — Product Development`, connect the repository, and configure the fields and views described in `project/TRACKING.md`.
+The `Margin — Product Development` project has been created for `26pratyush/margin`, and the initial issues are in Backlog. Keep its fields, views, and workflow conventions aligned with `project/TRACKING.md`.
 
-Start with the Roadmap, Current Wave, Backlog, Bugs, and Product Website views. Do not add more fields until a real workflow needs them.
+Use the Roadmap, Current Wave, Board, Backlog, Bugs, and Product Website views. Do not add more fields until a real workflow needs them.
 
 ## 4. Create the first Epic
 
@@ -60,6 +60,6 @@ The `wiki/` directory is Wiki-ready source. GitHub Wikis are separate from the m
 
 Keep technical files that must change with code in `docs/`; use the Wiki for stable, long-form project context.
 
-## 7. Connect Render later
+## 7. Publish the product website with GitHub Pages later
 
-When `site/` contains a real static site, connect Render to the repository and set the site root directory to `site/`. Deploy only the product/demo website. The local finance app should not be configured as a Render service.
+When `site/` contains a real static site, configure GitHub Pages to publish it through GitHub Actions. Deploy only the product/demo website. The local finance app should not be configured as a hosted service.

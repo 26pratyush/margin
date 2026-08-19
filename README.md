@@ -27,15 +27,15 @@ Margin is intentionally local-first:
 
 - The working finance application runs locally on the user's computer.
 - Real financial data is not stored on the public product website.
-- GitHub stores code, documentation, project tracking, issues, and pull requests.
-- Render hosts only the static product/demo website with screenshots and explanations.
+- GitHub stores code, documentation, project tracking, issues, pull requests, and releases.
+- GitHub Pages hosts only the static product/demo website with screenshots and explanations.
 
 ## Repository layout
 
 ```text
 margin/
 ├── app/                 # Local finance application; implementation starts here
-├── site/                # Static product/demo website for Render
+├── site/                # Static product/demo website for GitHub Pages
 ├── assets/screenshots/  # Approved product screenshots for the demo site
 ├── docs/                # Versioned project and technical context
 ├── project/             # Roadmap, epics, task briefs, dependencies, labels
@@ -73,6 +73,13 @@ Work should generally follow this path:
 7. Merge into `main` only when the issue's acceptance criteria are met.
 
 The exact application stack and commands are intentionally not locked yet. They are part of the first foundation epic so future implementation chats can make and record that decision deliberately.
+
+## Delivery and release boundary
+
+- The finance application runs locally and is never deployed with the public website.
+- The static product/demo website will be built from `site/` and published to GitHub Pages through GitHub Actions once it has a real build.
+- Versioned software releases use Git tags and GitHub Releases. They must contain source or synthetic build artifacts only.
+- Containers are optional development and packaging tooling. The runtime decision belongs to `MARGIN-002`; any reproducible container setup belongs to `MARGIN-004`.
 
 ## Local data and privacy
 

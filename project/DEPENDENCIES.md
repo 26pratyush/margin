@@ -48,4 +48,4 @@ Add automated checks and prove the architecture with the first end-to-end flow: 
 
 Tasks: `MARGIN-009`
 
-Create the static product/demo website structure and connect the eventual `site/` build to Render. This can begin with placeholders, but final screenshots depend on a usable local vertical slice.
+Create the static product/demo website structure and connect the eventual `site/` build to GitHub Pages. This can begin with placeholders, but final screenshots depend on a usable local vertical slice.

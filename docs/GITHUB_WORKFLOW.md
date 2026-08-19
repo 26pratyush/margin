@@ -57,3 +57,11 @@ The initial GitHub Project should contain:
 ## Merge rule
 
 `main` represents the most stable state. A Pull Request should link its issue and pass the checks that exist for the current stack. Do not merge real financial data, credentials, or unreviewed schema changes.
+
+## Deployment and releases
+
+- Pull Requests validate the changed app or site without deploying the finance application.
+- Once `site/` has a real build, pushes to `main` may publish the static site to GitHub Pages through GitHub Actions.
+- The finance application remains local-only; GitHub Pages must never receive its database or user records.
+- Versioned releases use `v0.x.y` tags and GitHub Releases. Container images are optional packaging artifacts, not a hosted runtime.
+- Protect `main` with required pull requests and CI checks once a repeatable workflow exists; do not require a check that has not been created yet.
