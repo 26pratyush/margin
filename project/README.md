@@ -10,6 +10,7 @@ This directory contains versioned planning resources that support the GitHub Iss
 - [Label definitions](LABELS.md)
 - [Epic index](epics/EPIC-001-foundation.md)
 - [Task briefs](tasks/README.md)
+- [Stack decision](../docs/decisions/ADR-001-local-browser-stack.md)
 
 ## How to use these files
 
