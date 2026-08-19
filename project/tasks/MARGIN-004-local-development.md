@@ -12,6 +12,22 @@ Make it straightforward to install, run, test, and reset Margin from a fresh che
 - Add a reset path that cannot touch unrelated files.
 - Keep local financial data outside version control.
 
+## Command contract
+
+From the repository root, the supported development commands are:
+
+```bash
+npm ci
+npm run dev
+npm run check
+npm run build
+npm run preview
+npm run demo:seed
+npm run demo:reset
+```
+
+The synthetic demo path is intentionally separate from the eventual Dexie/IndexedDB persistence boundary. It creates only the ignored `app/public/demo-data.json` payload and refuses to remove a non-demo file at that exact path. Containers remain optional packaging tooling rather than a prerequisite for local development.
+
 ## Acceptance criteria
 
 - Fresh-clone setup is documented and tested.

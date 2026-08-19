@@ -4,7 +4,19 @@
 
 The Margin finance application is developed and used locally. It is not deployed to GitHub Pages and does not need a hosted API or hosted database for the initial product.
 
-The v0.1 application is a browser SPA served locally from `http://localhost:5173`. The local setup instructions and package scripts will be implemented in MARGIN-004.
+The v0.1 application is a browser SPA served locally from `http://localhost:5173`.
+
+The canonical local workflow is a native npm workspace:
+
+```bash
+npm ci
+npm run dev
+npm run check
+npm run build
+npm run preview
+```
+
+The `app/` workspace contains the Vite application, while the repository root owns the lockfile and command wrappers. The public `site/` directory remains an independent build boundary.
 
 ## GitHub Pages product website
 
@@ -26,7 +38,7 @@ The site must build independently from the `site/` directory and contain no pers
 
 ## Container policy
 
-Containers are optional. MARGIN-004 may add a `Dockerfile` and portable `compose.yaml` for reproducible development and CI if the selected browser runtime benefits from it.
+Containers are optional and are not required for the MARGIN-004 development path. The native npm workflow is faster for day-to-day work and remains the canonical contributor experience. A later `Containerfile` may provide a reproducible static build/preview path for CI or packaging.
 
 - The native local command remains the canonical path unless the runtime decision says otherwise.
 - Docker Desktop is optional for personal or non-commercial open-source development; Podman is an open-source-compatible alternative.

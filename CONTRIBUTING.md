@@ -9,6 +9,24 @@ Margin is being developed as a local-first personal finance product. Contributio
 - Confirm that the issue's acceptance criteria are clear.
 - Do not use real personal financial data in screenshots, tests, fixtures, or commits.
 
+## Local development
+
+Use Node.js 24 LTS and npm. From the repository root, install the locked dependencies and start the local browser app:
+
+```bash
+npm ci
+npm run dev
+```
+
+Before opening a Pull Request, run at least:
+
+```bash
+npm run check
+npm run build
+```
+
+The synthetic demo path is available through `npm run demo:seed` and `npm run demo:reset`. It operates only on the generated `app/public/demo-data.json` file. Never place real financial records in the demo fixture, repository, screenshots, or issues.
+
 ## Branches
 
 Use focused branches named after the work:

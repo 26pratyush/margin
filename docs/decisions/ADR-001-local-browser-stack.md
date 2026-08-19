@@ -70,7 +70,7 @@ The database adapter will expose domain-level operations rather than leaking Dex
 
 ## Fresh-clone and packaging path
 
-MARGIN-004 will make these commands canonical once the app scaffold exists:
+MARGIN-004 materializes these canonical commands from the repository root:
 
 ```bash
 npm ci

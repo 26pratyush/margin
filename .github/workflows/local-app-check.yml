@@ -1,0 +1,58 @@
+name: Local app check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".node-version"
+      - "app/**"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/**"
+      - ".github/workflows/local-app-check.yml"
+  pull_request:
+    paths:
+      - ".node-version"
+      - "app/**"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/**"
+      - ".github/workflows/local-app-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify local app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run check
+
+      - name: Build static app
+        run: npm run build
+
+      - name: Seed synthetic demo data
+        run: npm run demo:seed
+
+      - name: Verify synthetic demo data
+        run: npm run demo:status
+
+      - name: Reset synthetic demo data
+        run: npm run demo:reset
+
+      - name: Confirm synthetic demo data is reset
+        run: npm run demo:status
