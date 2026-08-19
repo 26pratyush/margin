@@ -54,6 +54,7 @@ margin/
 - [Development workflow](docs/GITHUB_WORKFLOW.md)
 - [Deployment boundary](docs/DEPLOYMENT.md)
 - [Local data and backup](docs/LOCAL_DATA.md)
+- [Design system](docs/DESIGN_SYSTEM.md)
 - [Stack decision](docs/decisions/ADR-001-local-browser-stack.md)
 - [GitHub bootstrap checklist](docs/GITHUB_BOOTSTRAP.md)
 - [Roadmap](project/ROADMAP.md)

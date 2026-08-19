@@ -27,6 +27,7 @@ At any point in a pay period, the user should be able to answer:
 - **Low friction:** adding salary or an expense should take seconds.
 - **Useful density:** show meaningful information without dashboard clutter.
 - **Calm visual language:** dark, minimalist, restrained, and readable; no neon gradients or decorative AI-dashboard styling.
+- **Interface language:** graphite surfaces, warm ivory text, lichen green for primary emphasis, and restrained teal-blue for secondary orientation cues; the full palette lives in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 - **Inspectable decisions:** important product and architecture choices are documented.
 - **Safe by default:** synthetic data in the repository, explicit exports, and no accidental cloud dependency.
 - **Reconciled, not pretend-perfect:** the app records important activity and can sync its calculated actual balance to a user-entered real account balance without inventing individual small transactions.
