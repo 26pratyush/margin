@@ -84,7 +84,7 @@ The exact application stack and commands are intentionally not locked yet. They 
 
 ## Local data and privacy
 
-Local-first does not remove the need for backups. Margin should eventually provide explicit export and backup functionality, such as CSV and JSON, before it is trusted with a long history of real financial data.
+Local-first does not remove the need for backups. Margin should eventually provide explicit export and backup/restore functionality through CSV and JSON, before it is trusted with a long history of real financial data.
 
 Never commit real financial data, local database files, credentials, or production secrets to this repository.
 
