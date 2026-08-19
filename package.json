@@ -12,10 +12,14 @@
     "app"
   ],
   "scripts": {
-    "dev": "npm --workspace app run dev",
+    "dev": "node scripts/dev.mjs",
     "build": "npm --workspace app run build",
     "check": "npm --workspace app run check",
+    "test": "node --test service/*.test.mjs",
     "preview": "npm --workspace app run preview",
+    "data:seed": "node service/cli.mjs seed",
+    "data:reset": "node service/cli.mjs reset",
+    "data:status": "node service/cli.mjs status",
     "demo:seed": "node scripts/demo.mjs seed",
     "demo:reset": "node scripts/demo.mjs reset",
     "demo:status": "node scripts/demo.mjs status"

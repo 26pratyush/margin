@@ -79,7 +79,7 @@ At any point in a pay period, the user should be able to answer:
 - The v0.1 finance app is a browser-based local SPA served from `localhost`.
 - The v0.1 UI stack is React, TypeScript, and Vite on Node.js 24 LTS with npm.
 - The repository root provides the canonical npm workspace commands; `app/` contains the finance application and `site/` remains an independent website boundary.
-- Local persistence uses IndexedDB through Dexie behind a typed repository interface; there is no sync or hosted database.
+- Local persistence uses a loopback-only Node service with a file-backed SQLite database behind a typed repository interface; there is no sync or hosted database.
 - JSON is the lossless backup format and CSV is a secondary interoperability export.
 - The domain model separates actual ledger entries, planned commitments, and reconciliation snapshots.
 - Reconciliation compares real account balance to actual cash, then records a separate adjustment for untracked activity; commitments are applied afterward to derive disposable balance.

@@ -6,7 +6,7 @@ Margin is a local-first personal finance tracker for understanding where money g
 
 ## Project status
 
-Margin is in the foundation stage. The local application scaffold is now runnable; the persistence and first product flow are being built in follow-up issues.
+Margin is in the foundation stage. The local application now runs a browser UI with a loopback-only Node service and file-backed SQLite persistence.
 
 ## Product direction
 
@@ -72,19 +72,23 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). The development server uses a stable localhost origin because browser storage is scoped to the origin.
+Open [http://localhost:5173](http://localhost:5173). `npm run dev` starts both the Vite browser UI and the loopback-only SQLite service.
 
 Useful commands:
 
 ```bash
 npm run check        # TypeScript validation
 npm run build        # Static production build
+npm test             # Local storage and service tests
 npm run preview      # Preview the production build locally
+npm run data:status  # Show the local SQLite data path and record counts
+npm run data:seed    # Replace local records with synthetic data
+npm run data:reset   # Reset local records without touching unrelated files
 npm run demo:seed    # Create synthetic demo data
 npm run demo:reset   # Remove only the generated synthetic demo data
 ```
 
-After `npm run demo:seed`, open [http://localhost:5173/?demo=1](http://localhost:5173/?demo=1) to verify that synthetic entries load. Demo data is generated under an ignored path and is not a backup or a substitute for the IndexedDB persistence boundary planned in MARGIN-006.
+The finance app stores its primary data in an OS-specific application-data directory outside the repository. Set `MARGIN_DATA_DIR` to an absolute path to override it. Use the in-app JSON export/import actions as the lossless backup and restore path; browser cache clearing does not remove the SQLite file.
 
 ## Development workflow
 
@@ -109,7 +113,7 @@ The v0.1 application stack and local persistence decision are recorded in the [s
 
 ## Local data and privacy
 
-Local-first does not remove the need for backups. Margin should eventually provide explicit export and backup/restore functionality through CSV and JSON, before it is trusted with a long history of real financial data.
+Local-first does not remove the need for backups. JSON export is the lossless backup format and can be downloaded through the browser, stored on another drive, or imported in another browser or machine. CSV remains an interoperability format, not a restore format.
 
 Never commit real financial data, local database files, credentials, or production secrets to this repository.
 

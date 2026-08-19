@@ -19,7 +19,9 @@ coverage/
 # Local application data: never commit real financial records
 data/local/
 *.db
+*.db-*
 *.sqlite
+*.sqlite-*
 *.sqlite3
 
 # Site build output
