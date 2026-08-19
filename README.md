@@ -73,14 +73,14 @@ Work should generally follow this path:
 6. Run local checks and review the change.
 7. Merge into `main` only when the issue's acceptance criteria are met.
 
-The exact application stack and commands are intentionally not locked yet. They are part of the first foundation epic so future implementation chats can make and record that decision deliberately.
+The v0.1 application stack and local persistence decision are recorded in the [stack decision](docs/decisions/ADR-001-local-browser-stack.md) and [domain model decision](docs/decisions/ADR-002-domain-model-and-balance-rules.md). Implementation commands will be added in MARGIN-004.
 
 ## Delivery and release boundary
 
 - The finance application runs locally and is never deployed with the public website.
 - The static product/demo website will be built from `site/` and published to GitHub Pages through GitHub Actions once it has a real build.
 - Versioned software releases use Git tags and GitHub Releases. They must contain source or synthetic build artifacts only.
-- Containers are optional development and packaging tooling. The runtime decision belongs to `MARGIN-002`; any reproducible container setup belongs to `MARGIN-004`.
+- Containers are optional development and packaging tooling. Any reproducible container setup belongs to `MARGIN-004`.
 
 ## Local data and privacy
 

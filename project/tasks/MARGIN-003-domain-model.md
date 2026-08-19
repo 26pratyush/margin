@@ -4,6 +4,8 @@
 
 Define the first framework-independent model for income, expenses, categories, commitments, periods, and remaining money.
 
+The normative decision record is [`docs/decisions/ADR-002-domain-model-and-balance-rules.md`](../../docs/decisions/ADR-002-domain-model-and-balance-rules.md).
+
 ## Initial rules to settle
 
 - How income is dated and assigned to a month.
@@ -12,6 +14,7 @@ Define the first framework-independent model for income, expenses, categories, c
 - Whether commitments reduce disposable balance before they are paid.
 - How refunds, corrections, and deleted records behave.
 - Currency precision and rounding.
+- How a user reconciles the calculated actual balance with the real account balance when small transactions are omitted.
 
 ## Acceptance criteria
 

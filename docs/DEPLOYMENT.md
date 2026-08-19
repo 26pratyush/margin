@@ -26,7 +26,7 @@ The site must build independently from the `site/` directory and contain no pers
 
 ## Container policy
 
-Containers are optional. MARGIN-002 decides whether the selected local runtime benefits from containerization; MARGIN-004 may then add a `Dockerfile` and portable `compose.yaml` for reproducible development and CI.
+Containers are optional. MARGIN-004 may add a `Dockerfile` and portable `compose.yaml` for reproducible development and CI if the selected browser runtime benefits from it.
 
 - The native local command remains the canonical path unless the runtime decision says otherwise.
 - Docker Desktop is optional for personal or non-commercial open-source development; Podman is an open-source-compatible alternative.
