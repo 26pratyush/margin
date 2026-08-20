@@ -1,8 +1,8 @@
 ---
 name: Task
 about: Track one focused implementation, documentation, or tooling task
-title: "[TASK] "
-labels: ["task"]
+title: '[TASK] '
+labels: ['task']
 ---
 
 ## Goal

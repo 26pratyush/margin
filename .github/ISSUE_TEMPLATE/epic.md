@@ -1,8 +1,8 @@
 ---
 name: Epic
 about: Track a meaningful product or platform outcome with linked child issues
-title: "[EPIC] "
-labels: ["epic"]
+title: '[EPIC] '
+labels: ['epic']
 ---
 
 ## Outcome

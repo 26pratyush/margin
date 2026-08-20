@@ -56,7 +56,7 @@ The initial GitHub Project should contain:
 
 ## Merge rule
 
-`main` represents the most stable state. A Pull Request should link its issue and pass the checks that exist for the current stack. The `Local app check / Verify local app` workflow runs the locked install, TypeScript check, static build, and synthetic demo seed/reset path for app changes. Do not merge real financial data, credentials, or unreviewed schema changes.
+`main` represents the most stable state. A Pull Request should link its issue and pass the checks that exist for the current stack. The `Local app check / Verify local app` workflow runs the locked install, formatting check, lint, service/domain tests with coverage thresholds, TypeScript check, static build, and synthetic demo seed/reset path for every pull request and push to `main`. Do not merge real financial data, credentials, or unreviewed schema changes.
 
 ## Deployment and releases
 

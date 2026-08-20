@@ -8,18 +8,18 @@
 
 Margin v0.1 will be a browser-based local single-page application served from `localhost`.
 
-| Boundary | Decision |
-| --- | --- |
-| UI/runtime | React with TypeScript, built and served by Vite |
-| Toolchain | Node.js 24 LTS with npm and a committed lockfile |
-| App shape | Browser UI plus a loopback-only local service; no hosted API, account system, or cloud database |
-| Persistence | File-backed SQLite through the local Node service, accessed behind a typed repository interface |
-| Reactive reads | HTTP JSON reads from the local service; domain modules remain framework-independent |
-| Domain logic | Framework-independent TypeScript modules outside React components |
-| Unit/integration tests | Vitest with React Testing Library once implementation starts |
-| Browser smoke tests | Playwright after the first runnable shell exists |
-| Packaging | Source checkout plus npm scripts; optional static build and later container image |
-| Backup | Versioned JSON export as the canonical backup, CSV export for interoperability |
+| Boundary               | Decision                                                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| UI/runtime             | React with TypeScript, built and served by Vite                                                            |
+| Toolchain              | Node.js 24 LTS with npm and a committed lockfile                                                           |
+| App shape              | Browser UI plus a loopback-only local service; no hosted API, account system, or cloud database            |
+| Persistence            | File-backed SQLite through the local Node service, accessed behind a typed repository interface            |
+| Reactive reads         | HTTP JSON reads from the local service; domain modules remain framework-independent                        |
+| Domain logic           | Framework-independent TypeScript modules outside React components                                          |
+| Unit/integration tests | Node's built-in test runner for service/domain contracts; UI tests can add a browser-oriented runner later |
+| Browser smoke tests    | Deferred until the first interactive vertical slice exists                                                 |
+| Packaging              | Source checkout plus npm scripts; optional static build and later container image                          |
+| Backup                 | Versioned JSON export as the canonical backup, CSV export for interoperability                             |
 
 The canonical local URL for development is `http://localhost:5173`; the service binds to `127.0.0.1:4318`. The SQLite file lives outside the repository in an OS-specific application-data directory, with `MARGIN_DATA_DIR` available as an absolute-path override.
 

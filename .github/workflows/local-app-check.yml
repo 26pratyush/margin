@@ -3,21 +3,7 @@ name: Local app check
 on:
   push:
     branches: [main]
-    paths:
-      - ".node-version"
-      - "app/**"
-      - "package.json"
-      - "package-lock.json"
-      - "scripts/**"
-      - ".github/workflows/local-app-check.yml"
   pull_request:
-    paths:
-      - ".node-version"
-      - "app/**"
-      - "package.json"
-      - "package-lock.json"
-      - "scripts/**"
-      - ".github/workflows/local-app-check.yml"
 
 permissions:
   contents: read
@@ -33,11 +19,20 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: ".node-version"
+          node-version-file: '.node-version'
           cache: npm
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint source
+        run: npm run lint
+
+      - name: Run tests with coverage thresholds
+        run: npm run test:coverage
 
       - name: Type-check
         run: npm run check

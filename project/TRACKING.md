@@ -6,16 +6,16 @@ The project has been created for `26pratyush/margin`, and the initial Epic and c
 
 ## Recommended fields
 
-| Field | Values or purpose |
-| --- | --- |
-| Status | Backlog, Ready, In progress, Blocked, In review, Done |
-| Type | Epic, Feature, Task, Bug, Chore, Documentation |
-| Area | App, Design, Demo site, Docs, Testing, DevOps |
-| Priority | P0, P1, P2, P3 |
-| Effort | XS, S, M, L |
-| Wave | Wave 0, Wave 1, Wave 2, Wave 3, Wave 4 |
-| Target release | v0.1, v0.2, v0.3, v0.4, v1.0 |
-| Target date | Optional date field |
+| Field          | Values or purpose                                     |
+| -------------- | ----------------------------------------------------- |
+| Status         | Backlog, Ready, In progress, Blocked, In review, Done |
+| Type           | Epic, Feature, Task, Bug, Chore, Documentation        |
+| Area           | App, Design, Demo site, Docs, Testing, DevOps         |
+| Priority       | P0, P1, P2, P3                                        |
+| Effort         | XS, S, M, L                                           |
+| Wave           | Wave 0, Wave 1, Wave 2, Wave 3, Wave 4                |
+| Target release | v0.1, v0.2, v0.3, v0.4, v1.0                          |
+| Target date    | Optional date field                                   |
 
 ## Views
 

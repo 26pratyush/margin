@@ -93,7 +93,8 @@ export function validateRecord(collection, value, index = 0) {
     assertInteger(value.calculatedActualBalanceMinor, `${collection}[${index}].calculatedActualBalanceMinor`, details)
     assertInteger(value.realBalanceMinor, `${collection}[${index}].realBalanceMinor`, details)
     assertInteger(value.differenceMinor, `${collection}[${index}].differenceMinor`, details)
-    if (value.adjustmentEntryId !== undefined) assertString(value.adjustmentEntryId, `${collection}[${index}].adjustmentEntryId`, details)
+    if (value.adjustmentEntryId !== undefined)
+      assertString(value.adjustmentEntryId, `${collection}[${index}].adjustmentEntryId`, details)
   }
 
   if (details.length > 0) {
@@ -109,9 +110,11 @@ export function validateDataset(value) {
   const details = []
   if (value.format !== 'margin-backup') details.push('format must be margin-backup')
   if (value.formatVersion !== 1) details.push('formatVersion must be 1')
-  if (!Number.isSafeInteger(value.schemaVersion) || value.schemaVersion < 1) details.push('schemaVersion must be a positive integer')
+  if (!Number.isSafeInteger(value.schemaVersion) || value.schemaVersion < 1)
+    details.push('schemaVersion must be a positive integer')
   if (typeof value.appVersion !== 'string' || value.appVersion.trim() === '') details.push('appVersion is required')
-  if (typeof value.currency !== 'string' || !/^[A-Z]{3}$/.test(value.currency)) details.push('currency must be a three-letter uppercase code')
+  if (typeof value.currency !== 'string' || !/^[A-Z]{3}$/.test(value.currency))
+    details.push('currency must be a three-letter uppercase code')
   if (value.extensions !== undefined && !isRecord(value.extensions)) details.push('extensions must be an object')
 
   for (const collection of COLLECTIONS) {
@@ -142,14 +145,19 @@ export function validateDataset(value) {
   const entryIds = new Set(entries.filter(isRecord).map((record) => record.id))
   entries.forEach((entry, index) => {
     if (!isRecord(entry)) return
-    if (entry.categoryId !== undefined && !categoryIds.has(entry.categoryId)) details.push(`entries[${index}].categoryId does not reference a category`)
-    if (entry.commitmentId !== undefined && !commitmentIds.has(entry.commitmentId)) details.push(`entries[${index}].commitmentId does not reference a commitment`)
-    if (entry.refundOfId !== undefined && !entryIds.has(entry.refundOfId)) details.push(`entries[${index}].refundOfId does not reference an entry`)
-    if (entry.replacesId !== undefined && !entryIds.has(entry.replacesId)) details.push(`entries[${index}].replacesId does not reference an entry`)
+    if (entry.categoryId !== undefined && !categoryIds.has(entry.categoryId))
+      details.push(`entries[${index}].categoryId does not reference a category`)
+    if (entry.commitmentId !== undefined && !commitmentIds.has(entry.commitmentId))
+      details.push(`entries[${index}].commitmentId does not reference a commitment`)
+    if (entry.refundOfId !== undefined && !entryIds.has(entry.refundOfId))
+      details.push(`entries[${index}].refundOfId does not reference an entry`)
+    if (entry.replacesId !== undefined && !entryIds.has(entry.replacesId))
+      details.push(`entries[${index}].replacesId does not reference an entry`)
   })
   balanceSnapshots.forEach((snapshot, index) => {
     if (!isRecord(snapshot)) return
-    if (snapshot.adjustmentEntryId !== undefined && !entryIds.has(snapshot.adjustmentEntryId)) details.push(`balanceSnapshots[${index}].adjustmentEntryId does not reference an entry`)
+    if (snapshot.adjustmentEntryId !== undefined && !entryIds.has(snapshot.adjustmentEntryId))
+      details.push(`balanceSnapshots[${index}].adjustmentEntryId does not reference an entry`)
   })
 
   if (details.length > 0) throw new ValidationError('Dataset validation failed', details)
@@ -201,9 +209,7 @@ export function createSyntheticDataset() {
         note: 'Synthetic data only',
       },
     ],
-    categories: [
-      { id: 'synthetic-living', name: 'Living', color: '#b4a58d' },
-    ],
+    categories: [{ id: 'synthetic-living', name: 'Living', color: '#b4a58d' }],
     commitments: [
       {
         id: 'synthetic-sip',

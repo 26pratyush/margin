@@ -23,12 +23,12 @@ The model is framework-independent. React, persistence adapters, and UI componen
 
 Actual entries describe money that has moved or a deliberate balance correction.
 
-| Entry type | Direction | Meaning |
-| --- | --- | --- |
-| `income` | Credit | Salary, bonus, or other money received |
-| `expense` | Debit | Purchase or bill already paid |
-| `investment` | Debit | Actual investment contribution; not investment advice |
-| `refund` | Credit | Money returned from an expense or investment |
+| Entry type   | Direction       | Meaning                                                 |
+| ------------ | --------------- | ------------------------------------------------------- |
+| `income`     | Credit          | Salary, bonus, or other money received                  |
+| `expense`    | Debit           | Purchase or bill already paid                           |
+| `investment` | Debit           | Actual investment contribution; not investment advice   |
+| `refund`     | Credit          | Money returned from an expense or investment            |
 | `adjustment` | Credit or debit | Opening balance, reconciliation, or explicit correction |
 
 Each entry contains:

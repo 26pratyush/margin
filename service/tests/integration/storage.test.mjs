@@ -3,9 +3,9 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { BackupError } from './backup.mjs'
-import { openStorage } from './storage.mjs'
-import { ValidationError, createSyntheticDataset } from './validation.mjs'
+import { BackupError } from '../../backup.mjs'
+import { openStorage } from '../../storage.mjs'
+import { ValidationError, createSyntheticDataset } from '../../validation.mjs'
 
 async function withStorage(callback) {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-test-'))
@@ -74,11 +74,14 @@ test('rejects a tampered backup without changing existing data', async () => {
     const backup = storage.exportBackup()
     const tampered = { ...backup, data: { ...backup.data, entries: [] } }
 
-    await assert.rejects(() => storage.restoreBackup(tampered), (error) => {
-      assert.equal(error instanceof BackupError, true)
-      assert.equal(error.code, 'BACKUP_INTEGRITY_ERROR')
-      return true
-    })
+    await assert.rejects(
+      () => storage.restoreBackup(tampered),
+      (error) => {
+        assert.equal(error instanceof BackupError, true)
+        assert.equal(error.code, 'BACKUP_INTEGRITY_ERROR')
+        return true
+      },
+    )
     assert.deepEqual(storage.getDataset().entries, before.entries)
   })
 })

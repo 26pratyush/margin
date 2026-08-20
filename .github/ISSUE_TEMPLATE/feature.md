@@ -1,8 +1,8 @@
 ---
 name: Feature
 about: Propose a user-facing Margin capability
-title: "[FEATURE] "
-labels: ["feature"]
+title: '[FEATURE] '
+labels: ['feature']
 ---
 
 ## User outcome

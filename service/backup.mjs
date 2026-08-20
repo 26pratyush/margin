@@ -18,10 +18,12 @@ export class BackupError extends Error {
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue)
   if (value && typeof value === 'object') {
-    return Object.keys(value).sort().reduce((result, key) => {
-      result[key] = stableValue(value[key])
-      return result
-    }, {})
+    return Object.keys(value)
+      .sort()
+      .reduce((result, key) => {
+        result[key] = stableValue(value[key])
+        return result
+      }, {})
   }
   return value
 }
@@ -31,7 +33,7 @@ export function canonicalJson(value) {
 }
 
 function digestFor(envelope) {
-  const { integrity: _integrity, ...unsignedEnvelope } = envelope
+  const unsignedEnvelope = Object.fromEntries(Object.entries(envelope).filter(([key]) => key !== 'integrity'))
   return createHash('sha256').update(canonicalJson(unsignedEnvelope), 'utf8').digest('hex')
 }
 
@@ -112,7 +114,10 @@ function verifyIntegrity(input) {
     throw new BackupError('BACKUP_INTEGRITY_ERROR', 'Backup integrity metadata is not supported')
   }
   if (input.integrity.digest !== digestFor(input)) {
-    throw new BackupError('BACKUP_INTEGRITY_ERROR', 'Backup integrity check failed; the file may be corrupted or modified')
+    throw new BackupError(
+      'BACKUP_INTEGRITY_ERROR',
+      'Backup integrity check failed; the file may be corrupted or modified',
+    )
   }
   return []
 }
@@ -139,7 +144,10 @@ export function decodeBackup(input) {
   }
 
   if (version !== CURRENT_FORMAT_VERSION) {
-    throw new BackupError('UNSUPPORTED_BACKUP_VERSION', `This app supports backup versions 1 and ${CURRENT_FORMAT_VERSION}; received ${String(version)}`)
+    throw new BackupError(
+      'UNSUPPORTED_BACKUP_VERSION',
+      `This app supports backup versions 1 and ${CURRENT_FORMAT_VERSION}; received ${String(version)}`,
+    )
   }
 
   const warnings = verifyIntegrity(input)
