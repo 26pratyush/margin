@@ -39,6 +39,16 @@ type Health = {
   databaseFile: string
 }
 
+type BackupSummary = {
+  sourceFormatVersion: number
+  schemaVersion: number
+  appVersion: string
+  exportedAt: string
+  currency: string
+  counts: Record<string, number>
+  warnings: string[]
+}
+
 type Route = 'home' | 'transactions' | 'insights' | 'commitments' | 'settings'
 type IconName = 'home' | 'transactions' | 'insights' | 'commitments' | 'settings' | 'plus' | 'arrow' | 'download' | 'upload' | 'reset' | 'refresh' | 'chevron' | 'wallet' | 'spark'
 
@@ -221,7 +231,7 @@ function App() {
 
   async function exportBackup() {
     try {
-      const backup = await request<Dataset>('/api/backup')
+      const backup = await request<unknown>('/api/backup')
       const blob = new Blob([JSON.stringify(backup, null, 2) + '\n'], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -240,10 +250,13 @@ function App() {
     event.target.value = ''
     if (!file) return
     try {
-      const backup = JSON.parse(await file.text()) as Dataset
-      if (!window.confirm('Replace the current local dataset with this backup?')) return
-      await request<Dataset>('/api/backup/restore', { method: 'POST', body: JSON.stringify(backup) })
-      setNotice({ tone: 'success', text: 'Backup restored successfully.' })
+      const backup = JSON.parse(await file.text()) as unknown
+      const summary = await request<BackupSummary>('/api/backup/validate', { method: 'POST', body: JSON.stringify(backup) })
+      const countLabel = Object.entries(summary.counts).map(([collection, count]) => `${count} ${collection}`).join(', ')
+      const warningLabel = summary.warnings.length > 0 ? `\n\nNote: ${summary.warnings.join(' ')}` : ''
+      if (!window.confirm(`Restore the ${summary.currency} backup from ${summary.exportedAt.slice(0, 10)}?\n\n${countLabel}.\n\nThis replaces the current local dataset. A recovery snapshot will be created first.${warningLabel}`)) return
+      await request<{ summary: BackupSummary }>('/api/backup/restore', { method: 'POST', body: JSON.stringify(backup) })
+      setNotice({ tone: 'success', text: 'Backup restored successfully. A pre-restore recovery snapshot was saved locally.' })
       await refresh()
     } catch (reason) {
       setNotice({ tone: 'error', text: reason instanceof Error ? reason.message : 'Unable to restore this backup.' })

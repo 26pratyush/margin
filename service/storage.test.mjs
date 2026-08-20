@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { BackupError } from './backup.mjs'
 import { openStorage } from './storage.mjs'
 import { ValidationError, createSyntheticDataset } from './validation.mjs'
 
@@ -47,6 +48,54 @@ test('rejects an invalid restore before changing existing data', async () => {
       ValidationError,
     )
     assert.deepEqual(storage.getDataset().entries, before.entries)
+  })
+})
+
+test('exports a versioned backup and creates a recovery snapshot before restore', async () => {
+  await withStorage(async (storage) => {
+    storage.replaceDataset(createSyntheticDataset())
+    const backup = storage.exportBackup()
+    assert.equal(backup.formatVersion, 2)
+    assert.equal(backup.integrity.algorithm, 'sha256')
+
+    const result = await storage.restoreBackup(backup)
+    const recoveryFiles = await readdir(path.join(storage.dataDirectory, 'recovery'))
+
+    assert.equal(result.summary.recoverySnapshotCreated, true)
+    assert.equal(recoveryFiles.length, 1)
+    assert.equal(storage.getDataset().entries.length, 2)
+  })
+})
+
+test('rejects a tampered backup without changing existing data', async () => {
+  await withStorage(async (storage) => {
+    storage.replaceDataset(createSyntheticDataset())
+    const before = storage.getDataset()
+    const backup = storage.exportBackup()
+    const tampered = { ...backup, data: { ...backup.data, entries: [] } }
+
+    await assert.rejects(() => storage.restoreBackup(tampered), (error) => {
+      assert.equal(error instanceof BackupError, true)
+      assert.equal(error.code, 'BACKUP_INTEGRITY_ERROR')
+      return true
+    })
+    assert.deepEqual(storage.getDataset().entries, before.entries)
+  })
+})
+
+test('persists a reconciliation snapshot and adjustment without rewriting prior entries', async () => {
+  await withStorage(async (storage) => {
+    storage.replaceDataset(createSyntheticDataset())
+    const before = storage.getDataset()
+    const result = storage.reconcile({ asOf: '2026-08-20', realBalanceMinor: 9800000, note: 'Bank balance check' })
+    const after = storage.getDataset()
+
+    assert.equal(before.entries.length, 2)
+    assert.equal(after.entries.length, 3)
+    assert.equal(after.balanceSnapshots.length, 1)
+    assert.equal(result.snapshot.adjustmentEntryId, result.adjustment.id)
+    assert.equal(result.adjustment.direction, 'debit')
+    assert.equal(storage.getActualBalance(), 9800000)
   })
 })
 

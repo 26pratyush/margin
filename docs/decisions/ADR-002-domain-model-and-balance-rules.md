@@ -8,7 +8,7 @@
 
 Margin uses a single-currency, date-based ledger for actual money movements and a separate commitment model for planned reservations. Reconciliation adjusts the calculated actual cash balance to a user-entered real account balance without pretending that unrecorded activity was individually captured.
 
-The model is framework-independent. React, Dexie, and UI components must consume the domain contracts rather than own financial calculations.
+The model is framework-independent. React, persistence adapters, and UI components must consume the domain contracts rather than own financial calculations.
 
 ## Money and dates
 
@@ -251,4 +251,4 @@ commitment reserve:     ₹47,500  # with a ₹30,000 reserve
 
 ## Implementation boundary
 
-MARGIN-003 establishes this normative model and its golden examples. MARGIN-004 materializes the TypeScript scaffold. MARGIN-006 implements Dexie persistence, snapshots, import/export, and safe reset. MARGIN-007 adds executable unit/property tests, and MARGIN-008 proves salary, expense, and remaining-balance behavior in the UI.
+MARGIN-003 establishes this normative model and its golden examples. MARGIN-004 materializes the TypeScript scaffold. MARGIN-006 implements SQLite persistence, snapshots, versioned JSON import/export, and safe reset. MARGIN-007 adds executable unit/property tests, and MARGIN-008 proves salary, expense, and remaining-balance behavior in the UI.

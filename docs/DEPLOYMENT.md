@@ -49,7 +49,7 @@ Containers are optional and are not required for the MARGIN-004 development path
 
 The primary package is a source checkout with a committed npm lockfile. A local user runs the app with the documented npm command; no account, cloud service, or platform-specific installer is required for v0.1.
 
-The app stores records in browser-managed IndexedDB and provides an explicit versioned JSON export/import path. CSV is available as a secondary export. Browser storage is not treated as a backup because users can clear site data, use private browsing, change origins, or encounter quota eviction.
+The app stores records in a local SQLite file behind the loopback service and provides an explicit versioned JSON export/import path. CSV is available as a secondary export. Browser storage is not the primary ledger and is not treated as a backup because users can clear site data, use private browsing, change origins, or encounter quota eviction.
 
 ## Release rule
 

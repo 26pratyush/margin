@@ -26,7 +26,7 @@ npm run demo:seed
 npm run demo:reset
 ```
 
-The synthetic demo path is intentionally separate from the eventual Dexie/IndexedDB persistence boundary. It creates only the ignored `app/public/demo-data.json` payload and refuses to remove a non-demo file at that exact path. Containers remain optional packaging tooling rather than a prerequisite for local development.
+The synthetic demo path is intentionally separate from the local SQLite persistence boundary. It creates only the ignored `app/public/demo-data.json` payload and refuses to remove a non-demo file at that exact path. Containers remain optional packaging tooling rather than a prerequisite for local development.
 
 ## Acceptance criteria
 

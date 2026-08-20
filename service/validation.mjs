@@ -71,6 +71,9 @@ export function validateRecord(collection, value, index = 0) {
     assertInteger(value.amountMinor, `${collection}[${index}].amountMinor`, details, { min: 1 })
     assertDate(value.occurredOn, `${collection}[${index}].occurredOn`, details)
     if (!ENTRY_STATUSES.includes(value.status)) details.push(`${collection}[${index}].status is invalid`)
+    if (value.type === 'adjustment' && !['credit', 'debit'].includes(value.direction)) {
+      details.push(`${collection}[${index}].direction must be credit or debit for an adjustment`)
+    }
   }
 
   if (collection === 'categories') {
@@ -90,6 +93,7 @@ export function validateRecord(collection, value, index = 0) {
     assertInteger(value.calculatedActualBalanceMinor, `${collection}[${index}].calculatedActualBalanceMinor`, details)
     assertInteger(value.realBalanceMinor, `${collection}[${index}].realBalanceMinor`, details)
     assertInteger(value.differenceMinor, `${collection}[${index}].differenceMinor`, details)
+    if (value.adjustmentEntryId !== undefined) assertString(value.adjustmentEntryId, `${collection}[${index}].adjustmentEntryId`, details)
   }
 
   if (details.length > 0) {
@@ -129,6 +133,25 @@ export function validateDataset(value) {
     })
   }
 
+  const categories = Array.isArray(value.categories) ? value.categories : []
+  const commitments = Array.isArray(value.commitments) ? value.commitments : []
+  const entries = Array.isArray(value.entries) ? value.entries : []
+  const balanceSnapshots = Array.isArray(value.balanceSnapshots) ? value.balanceSnapshots : []
+  const categoryIds = new Set(categories.filter(isRecord).map((record) => record.id))
+  const commitmentIds = new Set(commitments.filter(isRecord).map((record) => record.id))
+  const entryIds = new Set(entries.filter(isRecord).map((record) => record.id))
+  entries.forEach((entry, index) => {
+    if (!isRecord(entry)) return
+    if (entry.categoryId !== undefined && !categoryIds.has(entry.categoryId)) details.push(`entries[${index}].categoryId does not reference a category`)
+    if (entry.commitmentId !== undefined && !commitmentIds.has(entry.commitmentId)) details.push(`entries[${index}].commitmentId does not reference a commitment`)
+    if (entry.refundOfId !== undefined && !entryIds.has(entry.refundOfId)) details.push(`entries[${index}].refundOfId does not reference an entry`)
+    if (entry.replacesId !== undefined && !entryIds.has(entry.replacesId)) details.push(`entries[${index}].replacesId does not reference an entry`)
+  })
+  balanceSnapshots.forEach((snapshot, index) => {
+    if (!isRecord(snapshot)) return
+    if (snapshot.adjustmentEntryId !== undefined && !entryIds.has(snapshot.adjustmentEntryId)) details.push(`balanceSnapshots[${index}].adjustmentEntryId does not reference an entry`)
+  })
+
   if (details.length > 0) throw new ValidationError('Dataset validation failed', details)
 
   try {
@@ -146,6 +169,7 @@ export function createEmptyDataset() {
     appVersion: '0.1.0',
     exportedAt: new Date().toISOString(),
     currency: 'INR',
+    extensions: {},
     entries: [],
     categories: [],
     commitments: [],
@@ -198,4 +222,3 @@ export function createSyntheticDataset() {
 export function collectionNames() {
   return [...COLLECTIONS]
 }
-

@@ -1,13 +1,16 @@
-import { chmod, mkdir } from 'node:fs/promises'
+import { chmod, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { BackupError, createBackupEnvelope, decodeBackup, validateBackup as validateBackupDocument } from './backup.mjs'
 import {
   ConflictError,
   createEmptyDataset,
   collectionNames,
   validateDataset,
   validateRecord,
+  ValidationError,
 } from './validation.mjs'
 
 const MIGRATIONS = [
@@ -57,6 +60,10 @@ function now() {
   return new Date().toISOString()
 }
 
+function fileTimestamp() {
+  return now().replace(/[.:]/g, '-')
+}
+
 function parseJson(value, label) {
   try {
     return JSON.parse(value)
@@ -66,10 +73,11 @@ function parseJson(value, label) {
 }
 
 export class MarginStorage {
-  constructor(database, dataDirectory, databasePath) {
+  constructor(database, dataDirectory, databasePath, recoveryDirectory) {
     this.database = database
     this.dataDirectory = dataDirectory
     this.databasePath = databasePath
+    this.recoveryDirectory = recoveryDirectory
   }
 
   close() {
@@ -152,6 +160,88 @@ export class MarginStorage {
     }
   }
 
+  exportBackup() {
+    return createBackupEnvelope(this.getDataset())
+  }
+
+  validateBackup(input) {
+    return validateBackupDocument(input)
+  }
+
+  async createRecoverySnapshot(label) {
+    await makePrivateDirectory(this.recoveryDirectory)
+    const filename = `${label}-${fileTimestamp()}-${randomUUID()}.json`
+    const destination = path.join(this.recoveryDirectory, filename)
+    await writeFile(destination, `${JSON.stringify(this.exportBackup(), null, 2)}\n`, { encoding: 'utf8', mode: 0o600 })
+
+    const recoveryFiles = (await readdir(this.recoveryDirectory))
+      .filter((file) => file.endsWith('.json'))
+      .sort()
+      .reverse()
+    for (const staleFile of recoveryFiles.slice(3)) {
+      await rm(path.join(this.recoveryDirectory, staleFile), { force: true })
+    }
+    return filename
+  }
+
+  async restoreBackup(input) {
+    const decoded = decodeBackup(input)
+    const recoveryFile = await this.createRecoverySnapshot('pre-restore')
+    const dataset = this.replaceDataset(decoded.dataset)
+    return {
+      dataset,
+      summary: {
+        ...decoded.summary,
+        recoverySnapshotCreated: true,
+        recoveryFile,
+      },
+    }
+  }
+
+  getActualBalance() {
+    return this.getCollection('entries')
+      .filter((entry) => entry.status === 'active')
+      .reduce((total, entry) => {
+        if (entry.type === 'income' || entry.type === 'refund') return total + entry.amountMinor
+        if (entry.type === 'adjustment' && entry.direction === 'credit') return total + entry.amountMinor
+        return total - entry.amountMinor
+      }, 0)
+  }
+
+  reconcile({ asOf, realBalanceMinor, note } = {}) {
+    const calculatedActualBalanceMinor = this.getActualBalance()
+    if (!Number.isSafeInteger(realBalanceMinor)) throw new ValidationError('realBalanceMinor must be an integer')
+    const differenceMinor = realBalanceMinor - calculatedActualBalanceMinor
+    const snapshot = {
+      id: randomUUID(),
+      asOf,
+      calculatedActualBalanceMinor,
+      realBalanceMinor,
+      differenceMinor,
+      note,
+    }
+
+    return this.transaction(() => {
+      let adjustment = null
+      if (differenceMinor !== 0) {
+        adjustment = {
+          id: randomUUID(),
+          type: 'adjustment',
+          amountMinor: Math.abs(differenceMinor),
+          occurredOn: asOf,
+          status: 'active',
+          direction: differenceMinor > 0 ? 'credit' : 'debit',
+          adjustmentReason: 'reconciliation',
+          note: note || 'Balance reconciliation adjustment',
+        }
+        this.createRecord('entries', adjustment)
+        snapshot.adjustmentEntryId = adjustment.id
+      }
+      this.createRecord('balanceSnapshots', snapshot)
+      return { snapshot, adjustment, dataset: this.getDataset() }
+    })
+  }
+
   replaceDataset(input) {
     const dataset = validateDataset(input)
     const metadata = { ...dataset }
@@ -209,10 +299,10 @@ export async function openStorage({ dataDirectory } = {}) {
     }
   }
 
-  const storage = new MarginStorage(database, resolvedDirectory, databasePath)
+  const recoveryDirectory = path.join(resolvedDirectory, 'recovery')
+  const storage = new MarginStorage(database, resolvedDirectory, databasePath, recoveryDirectory)
   if (!database.prepare('SELECT 1 FROM dataset_meta WHERE key = ?').get('dataset')) {
     storage.replaceDataset(createEmptyDataset())
   }
   return storage
 }
-

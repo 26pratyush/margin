@@ -67,7 +67,7 @@ The database adapter will expose domain-level operations rather than leaking SQL
 - The database schema is versioned independently from the export format.
 - JSON is the lossless, versioned backup format. It should include a format identifier, schema version, export timestamp, app version, and validated domain records.
 - CSV is a secondary, human-readable export for selected records and interoperability; it is not the lossless restore format.
-- Import must parse and validate the complete file before writing anything. v0.1 restore is an explicit replace operation after confirmation, with an export of the current dataset offered first.
+- Import must parse and validate the complete file before writing anything. v0.1 restore is an explicit replace operation after browser preview and confirmation, with an automatic local pre-restore JSON snapshot created first.
 - Reset is an explicit destructive action that deletes the local database only after confirmation.
 - Browser cache clearing and changing browser profiles do not remove the primary SQLite file, but moving to another machine still requires importing a JSON backup.
 - No automatic cloud sync or telemetry is part of this decision.
@@ -92,8 +92,6 @@ The app is not packaged as a desktop executable for v0.1. Native npm setup remai
 - [Node.js release guidance](https://nodejs.org/en/about/previous-releases)
 - [MDN IndexedDB terminology](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Basic_Terminology)
 - [MDN storage quotas and eviction](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria)
-- [Dexie API reference](https://dexie.org/docs/API-Reference)
-- [Dexie React live queries](https://dexie.org/docs/dexie-react-hooks/useLiveQuery%28%29)
 - [Vitest getting started](https://vitest.dev/guide/)
 - [Playwright installation and browser coverage](https://playwright.dev/docs/intro)
 - [Electron overview](https://www.electronjs.org/docs/latest/)
