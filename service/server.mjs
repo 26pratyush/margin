@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { openStorage } from './storage.mjs'
+import { BackupError } from './backup.mjs'
 import {
   ConflictError,
   ValidationError,
@@ -60,6 +61,7 @@ function requireBrowserMutation(request) {
 function errorResponse(error) {
   if (error instanceof ValidationError) return { statusCode: 400, body: { error: error.code, message: error.message, details: error.details } }
   if (error instanceof ConflictError) return { statusCode: 409, body: { error: error.code, message: error.message } }
+  if (error instanceof BackupError) return { statusCode: error.statusCode, body: { error: error.code, message: error.message, details: error.details } }
   if (error.statusCode) return { statusCode: error.statusCode, body: { error: 'FORBIDDEN', message: error.message } }
   return { statusCode: 500, body: { error: 'INTERNAL_ERROR', message: 'Margin service could not complete the request' } }
 }
@@ -94,14 +96,19 @@ async function handleRequest(request, response, storage) {
   }
 
   if (method === 'GET' && route[0] === 'backup') {
-    sendJson(response, 200, storage.exportDataset(), {
+    sendJson(response, 200, storage.exportBackup(), {
       'Content-Disposition': 'attachment; filename="margin-backup.json"',
     })
     return
   }
 
+  if (method === 'POST' && route[0] === 'backup' && route[1] === 'validate') {
+    sendJson(response, 200, storage.validateBackup(await readBody(request)))
+    return
+  }
+
   if (method === 'POST' && (route[0] === 'restore' || (route[0] === 'backup' && route[1] === 'restore'))) {
-    sendJson(response, 200, storage.replaceDataset(await readBody(request)))
+    sendJson(response, 200, await storage.restoreBackup(await readBody(request)))
     return
   }
 
@@ -112,6 +119,11 @@ async function handleRequest(request, response, storage) {
 
   if (method === 'POST' && route[0] === 'seed') {
     sendJson(response, 200, storage.replaceDataset(createSyntheticDataset()))
+    return
+  }
+
+  if (method === 'POST' && route[0] === 'reconcile') {
+    sendJson(response, 201, storage.reconcile(await readBody(request)))
     return
   }
 
@@ -169,4 +181,3 @@ async function main() {
 if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === pathToFileURL(fileURLToPath(import.meta.url)).href) {
   await main()
 }
-

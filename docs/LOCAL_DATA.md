@@ -22,9 +22,25 @@ The database and local runtime files are ignored by Git. Never commit real finan
 
 ## Backup and restore
 
-JSON is the lossless, versioned backup format. The envelope contains `format`, `formatVersion`, `schemaVersion`, app version, currency, and complete arrays for entries, categories, commitments, and balance snapshots. Import validates the complete dataset before replacing anything and performs the replacement in one SQLite transaction.
+JSON is the only user-facing backup format. It is the lossless, versioned portability contract and is independent of operating-system paths, SQLite files, browser profiles, and Docker volumes.
 
-The browser provides download and file-picker based restore, so a backup can be saved outside the application, used after clearing browser data, or imported in another browser or machine. A raw SQLite copy is not the only recovery path.
+The current envelope contains:
+
+- `format` and `formatVersion`.
+- `schemaVersion`, app version, export timestamp, and currency.
+- Complete entries, categories, commitments, and balance snapshots under `data`.
+- An `extensions` object for forward-compatible metadata.
+- A SHA-256 integrity digest over the canonical envelope.
+
+The service still accepts the original flat v1 backup shape and migrates it in memory. New exports use v2. An app rejects unsupported future versions rather than silently dropping fields.
+
+Restore validates the full file, verifies its integrity digest, checks cross-record references, shows a preview in the browser, creates a local pre-restore recovery snapshot, and replaces the dataset in one SQLite transaction. Invalid files cannot change the current dataset.
+
+The browser provides download and file-picker based restore, so a backup can be saved outside the application, used after clearing browser data, or imported in another browser or machine. Raw SQLite archives are intentionally out of scope for v0.1; they add WAL, locking, and schema portability concerns without improving the browser-based recovery path.
+
+## Local recovery snapshots
+
+Before a valid restore, Margin writes a JSON snapshot under the local data directory's `recovery/` folder and keeps the latest three snapshots. These are an automatic safety net for an accidental restore, not a replacement for copying a JSON backup to another drive or machine.
 
 ## Docker
 

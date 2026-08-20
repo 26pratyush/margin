@@ -47,3 +47,47 @@ test('rejects mutating requests without the browser client header', async () => 
   }
 })
 
+test('previews and restores a versioned backup through the HTTP boundary', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-backup-test-'))
+  const context = await startServer(directory)
+  try {
+    await fetch(`${context.url}/api/seed`, { method: 'POST', headers: clientHeaders(), body: '{}' })
+    const backup = await fetch(`${context.url}/api/backup`).then((response) => response.json())
+    assert.equal(backup.formatVersion, 2)
+
+    const preview = await fetch(`${context.url}/api/backup/validate`, { method: 'POST', headers: clientHeaders(), body: JSON.stringify(backup) }).then((response) => response.json())
+    assert.equal(preview.counts.entries, 2)
+
+    await fetch(`${context.url}/api/reset`, { method: 'POST', headers: clientHeaders(), body: '{}' })
+    const restored = await fetch(`${context.url}/api/backup/restore`, { method: 'POST', headers: clientHeaders(), body: JSON.stringify(backup) }).then((response) => response.json())
+    assert.equal(restored.summary.recoverySnapshotCreated, true)
+
+    const dataset = await fetch(`${context.url}/api/dataset`).then((response) => response.json())
+    assert.equal(dataset.entries.length, 2)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('persists a reconciliation adjustment and snapshot through the HTTP boundary', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-reconcile-test-'))
+  const context = await startServer(directory)
+  try {
+    await fetch(`${context.url}/api/seed`, { method: 'POST', headers: clientHeaders(), body: '{}' })
+    const response = await fetch(`${context.url}/api/reconcile`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ asOf: '2026-08-20', realBalanceMinor: 9800000, note: 'Bank balance check' }),
+    })
+    const result = await response.json()
+
+    assert.equal(response.status, 201)
+    assert.equal(result.snapshot.adjustmentEntryId, result.adjustment.id)
+    assert.equal(result.dataset.balanceSnapshots.length, 1)
+    assert.equal(result.dataset.entries.length, 3)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
