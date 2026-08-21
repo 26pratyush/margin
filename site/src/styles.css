@@ -82,7 +82,7 @@ svg {
 
 .site {
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: clip;
   background: var(--canvas);
 }
 
@@ -798,13 +798,14 @@ svg {
 }
 
 .workflow-preview {
-  position: sticky;
-  top: 118px;
+  align-self: stretch;
+  position: relative;
   min-height: 620px;
 }
 
 .workflow-preview-sticky {
-  position: relative;
+  position: sticky;
+  top: 118px;
   min-height: 515px;
   padding: 25px;
   overflow: hidden;
@@ -1379,11 +1380,14 @@ svg {
   }
 
   .workflow-preview {
+    align-self: auto;
     grid-row: 1;
     min-height: auto;
   }
 
   .workflow-preview-sticky {
+    position: relative;
+    top: auto;
     min-height: 450px;
   }
 
