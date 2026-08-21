@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import App from './App'
 
@@ -22,5 +22,14 @@ describe('Margin product site', () => {
     fireEvent.click(principle)
     expect(principle).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByText(/every screen should explain/i)).not.toBeVisible()
+  })
+
+  it('keeps the four-step workflow tied to one dynamic preview', () => {
+    render(<App />)
+
+    expect(screen.getAllByTestId('workflow-step')).toHaveLength(4)
+    expect(screen.getAllByTestId('workflow-preview')).toHaveLength(1)
+    expect(screen.getByTestId('workflow-preview')).toHaveAttribute('aria-live', 'polite')
+    expect(within(screen.getByTestId('workflow-preview')).getByText(/recorded income/i)).toBeInTheDocument()
   })
 })

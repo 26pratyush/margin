@@ -424,6 +424,7 @@ function App() {
                 <article
                   className={`workflow-step ${activeStep === index ? 'workflow-step-active' : ''}`}
                   data-workflow-step={index}
+                  data-testid="workflow-step"
                   key={step.eyebrow}
                 >
                   <span className="step-index">{String(index + 1).padStart(2, '0')}</span>
@@ -435,7 +436,7 @@ function App() {
                 </article>
               ))}
             </div>
-            <div className="workflow-preview" aria-live="polite">
+            <div className="workflow-preview" aria-live="polite" data-testid="workflow-preview">
               <div className="workflow-preview-sticky">
                 <div className="preview-topline">
                   <span>
