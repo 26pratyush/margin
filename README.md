@@ -94,6 +94,8 @@ npm run demo:reset   # Remove only the generated synthetic demo data
 
 The finance app stores its primary data in an OS-specific application-data directory outside the repository. Set `MARGIN_DATA_DIR` to an absolute path to override it. Use the in-app JSON export/import actions as the lossless backup and restore path; browser cache clearing does not remove the SQLite file.
 
+To try the first ledger flow, open Overview or Transactions, choose Add transaction, select Salary or Expense, and save a positive amount with a date. Expenses also require a category; the first use of a category creates it locally and later entries reuse it. The dashboard refreshes after each save, and a browser refresh should show the same records.
+
 ## Development workflow
 
 Work should generally follow this path:

@@ -39,6 +39,48 @@ test('persists synthetic records after closing and reopening the service', async
   }
 })
 
+test('creates salary and expense records atomically and reuses expense categories', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-entry-command-'))
+  const first = await openStorage({ dataDirectory: directory })
+  try {
+    const salary = first.createTransaction({
+      type: 'income',
+      amountMinor: 10000000,
+      occurredOn: '2026-08-01',
+      source: 'Salary',
+    })
+    const firstExpense = first.createTransaction({
+      type: 'expense',
+      amountMinor: 125000,
+      occurredOn: '2026-08-02',
+      categoryName: 'Food',
+    })
+    const secondExpense = first.createTransaction({
+      type: 'expense',
+      amountMinor: 50000,
+      occurredOn: '2026-08-03',
+      categoryName: ' food ',
+    })
+
+    assert.equal(salary.entry.type, 'income')
+    assert.equal(firstExpense.entry.categoryId, secondExpense.entry.categoryId)
+    assert.equal(first.getDataset().entries.length, 3)
+    assert.equal(first.getDataset().categories.length, 1)
+    assert.equal(first.getSummary().disposableBalanceMinor, 9825000)
+  } finally {
+    first.close()
+  }
+
+  const second = await openStorage({ dataDirectory: directory })
+  try {
+    assert.equal(second.getDataset().entries.length, 3)
+    assert.equal(second.getSummary().expenseMinor, 175000)
+  } finally {
+    second.close()
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('rejects an invalid restore before changing existing data', async () => {
   await withStorage(async (storage) => {
     storage.replaceDataset(createSyntheticDataset())
@@ -109,5 +151,18 @@ test('reset clears Margin records without deleting the configured data directory
     assert.equal(reset.entries.length, 0)
     assert.equal(reset.commitments.length, 0)
     assert.equal(storage.dataDirectory.startsWith(os.tmpdir()), true)
+  })
+})
+
+test('existing reset removes first-slice salary, expense, and category records', async () => {
+  await withStorage(async (storage) => {
+    storage.createTransaction({ type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01' })
+    storage.createTransaction({ type: 'expense', amountMinor: 125000, occurredOn: '2026-08-02', categoryName: 'Food' })
+
+    const reset = storage.reset()
+
+    assert.equal(reset.entries.length, 0)
+    assert.equal(reset.categories.length, 0)
+    assert.equal(storage.getSummary().actualBalanceMinor, 0)
   })
 })

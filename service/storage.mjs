@@ -5,12 +5,14 @@ import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { createBackupEnvelope, decodeBackup, validateBackup as validateBackupDocument } from './backup.mjs'
 import { calculateActualBalanceMinor } from './domain/calculations.mjs'
+import { calculateLedgerSummary } from './domain/summary.mjs'
 import {
   ConflictError,
   createEmptyDataset,
   collectionNames,
   validateDataset,
   validateRecord,
+  validateTransactionInput,
   ValidationError,
 } from './validation.mjs'
 
@@ -210,6 +212,47 @@ export class MarginStorage {
 
   getActualBalance() {
     return calculateActualBalanceMinor(this.getCollection('entries'))
+  }
+
+  getSummary() {
+    return calculateLedgerSummary({
+      entries: this.getCollection('entries'),
+      commitments: this.getCollection('commitments'),
+    })
+  }
+
+  createTransaction(input) {
+    const transaction = validateTransactionInput(input)
+
+    return this.transaction(() => {
+      let category = null
+      let categoryId
+      if (transaction.type === 'expense') {
+        const normalizedName = transaction.categoryName.toLocaleLowerCase()
+        category = this.getCollection('categories').find(
+          (candidate) => candidate.name.trim().toLocaleLowerCase() === normalizedName,
+        )
+        if (!category) {
+          category = { id: randomUUID(), name: transaction.categoryName }
+          this.createRecord('categories', category)
+        }
+        categoryId = category.id
+      }
+
+      const entry = {
+        id: randomUUID(),
+        type: transaction.type,
+        amountMinor: transaction.amountMinor,
+        occurredOn: transaction.occurredOn,
+        status: 'active',
+        ...(categoryId ? { categoryId } : {}),
+        ...(transaction.source ? { source: transaction.source } : {}),
+        ...(transaction.note ? { note: transaction.note } : {}),
+      }
+      this.createRecord('entries', entry)
+
+      return { entry, category, dataset: this.getDataset(), summary: this.getSummary() }
+    })
   }
 
   reconcile({ asOf, realBalanceMinor, note } = {}) {

@@ -35,6 +35,59 @@ test('exposes health and persists a seeded dataset through the HTTP boundary', a
   }
 })
 
+test('creates salary and expense records and exposes the updated summary', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-entry-test-'))
+  const context = await startServer(directory)
+  try {
+    const salary = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01', source: 'Salary' }),
+    })
+    assert.equal(salary.status, 201)
+
+    const expense = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ type: 'expense', amountMinor: 125000, occurredOn: '2026-08-02', categoryName: 'Food' }),
+    })
+    const expenseBody = await expense.json()
+    assert.equal(expense.status, 201)
+    assert.equal(expenseBody.entry.categoryId, expenseBody.category.id)
+
+    const summary = await fetch(`${context.url}/api/summary`).then((response) => response.json())
+    assert.equal(summary.incomeMinor, 10000000)
+    assert.equal(summary.expenseMinor, 125000)
+    assert.equal(summary.actualBalanceMinor, 9875000)
+    assert.equal(summary.disposableBalanceMinor, 9875000)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('rejects invalid expense commands before writing records', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-invalid-entry-test-'))
+  const context = await startServer(directory)
+  try {
+    const response = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ type: 'expense', amountMinor: 0, occurredOn: '2026-02-30' }),
+    })
+    const body = await response.json()
+    assert.equal(response.status, 400)
+    assert.equal(body.error, 'VALIDATION_ERROR')
+
+    const dataset = await fetch(`${context.url}/api/dataset`).then((result) => result.json())
+    assert.equal(dataset.entries.length, 0)
+    assert.equal(dataset.categories.length, 0)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('rejects mutating requests without the browser client header', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-header-test-'))
   const context = await startServer(directory)

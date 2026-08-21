@@ -101,6 +101,11 @@ async function handleRequest(request, response, storage) {
     return
   }
 
+  if (method === 'GET' && route[0] === 'summary') {
+    sendJson(response, 200, storage.getSummary())
+    return
+  }
+
   if (method === 'GET' && route[0] === 'backup') {
     sendJson(response, 200, storage.exportBackup(), {
       'Content-Disposition': 'attachment; filename="margin-backup.json"',
@@ -130,6 +135,11 @@ async function handleRequest(request, response, storage) {
 
   if (method === 'POST' && route[0] === 'reconcile') {
     sendJson(response, 201, storage.reconcile(await readBody(request)))
+    return
+  }
+
+  if (method === 'POST' && route[0] === 'entries' && route.length === 1) {
+    sendJson(response, 201, storage.createTransaction(await readBody(request)))
     return
   }
 

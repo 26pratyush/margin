@@ -1,4 +1,5 @@
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react'
+import { TransactionDraft, TransactionForm, TransactionKind } from './components/TransactionForm'
 
 type Entry = {
   id: string
@@ -31,6 +32,19 @@ type Dataset = {
   categories: Array<{ id: string; name: string }>
   commitments: Commitment[]
   balanceSnapshots: Array<{ id: string; asOf: string; realBalanceMinor: number }>
+}
+
+type Summary = {
+  incomeMinor: number
+  expenseMinor: number
+  refundMinor: number
+  investmentMinor: number
+  spendingMinor: number
+  actualBalanceMinor: number
+  reservedCommitmentMinor: number
+  disposableBalanceMinor: number
+  entryCount: number
+  activeEntryCount: number
 }
 
 type Health = {
@@ -112,8 +126,11 @@ function amountLabel(entry: Entry, currency: string) {
   return `${positive ? '+' : '−'}${money(entry.amountMinor, currency)}`
 }
 
-function entryLabel(entry: Entry) {
-  return entry.note ?? entry.source ?? entry.type.charAt(0).toUpperCase() + entry.type.slice(1)
+function entryLabel(entry: Entry, categories: Dataset['categories'] = []) {
+  if (entry.note) return entry.note
+  if (entry.source) return entry.source
+  if (entry.categoryId) return categories.find((category) => category.id === entry.categoryId)?.name ?? 'Expense'
+  return entry.type.charAt(0).toUpperCase() + entry.type.slice(1)
 }
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -336,7 +353,15 @@ function Metric({
   )
 }
 
-function ActivityRow({ entry, currency }: { entry: Entry; currency: string }) {
+function ActivityRow({
+  entry,
+  currency,
+  categories = [],
+}: {
+  entry: Entry
+  currency: string
+  categories?: Dataset['categories']
+}) {
   const positive = entry.type === 'income' || entry.type === 'refund'
   return (
     <div className="activity-row">
@@ -344,7 +369,7 @@ function ActivityRow({ entry, currency }: { entry: Entry; currency: string }) {
         <Icon name={positive ? 'arrow' : 'transactions'} size={16} />
       </div>
       <div className="activity-copy">
-        <strong>{entryLabel(entry)}</strong>
+        <strong>{entryLabel(entry, categories)}</strong>
         <span>
           {shortDate(entry.occurredOn)} · {entry.status}
         </span>
@@ -378,33 +403,24 @@ function NavLink({
 
 function HomeView({
   dataset,
+  summary,
   health,
   onSeed,
   onNavigate,
-  onNotice,
+  onOpenForm,
 }: {
   dataset: Dataset | null
+  summary: Summary | null
   health: Health | null
   onSeed: () => void
   onNavigate: (route: Route) => void
-  onNotice: (notice: Notice) => void
+  onOpenForm: (type?: TransactionKind) => void
 }) {
   const entries = dataset?.entries ?? []
   const commitments = dataset?.commitments ?? []
   const currency = dataset?.currency ?? 'INR'
-  const activeEntries = entries.filter((entry) => entry.status === 'active')
-  const actualBalance = activeEntries.reduce(
-    (total, entry) =>
-      entry.type === 'income' || entry.type === 'refund' ? total + entry.amountMinor : total - entry.amountMinor,
-    0,
-  )
-  const spent = activeEntries
-    .filter((entry) => ['expense', 'investment'].includes(entry.type))
-    .reduce((total, entry) => total + entry.amountMinor, 0)
-  const committed = commitments
-    .filter((item) => item.status !== 'cancelled' && item.status !== 'settled')
-    .reduce((total, item) => total + item.plannedAmountMinor, 0)
   const hasData = entries.length > 0 || commitments.length > 0
+  const actualBalance = summary?.actualBalanceMinor ?? 0
 
   return (
     <>
@@ -413,16 +429,7 @@ function HomeView({
         title="Good to see you."
         description="A clear view of what came in, what went out, and what is already spoken for."
         action={
-          <Button
-            variant="primary"
-            icon="plus"
-            onClick={() =>
-              onNotice({
-                tone: 'info',
-                text: 'Transaction entry will land in the next ledger slice. This shell is ready for it.',
-              })
-            }
-          >
+          <Button variant="primary" icon="plus" onClick={() => onOpenForm()}>
             Add transaction
           </Button>
         }
@@ -439,11 +446,19 @@ function HomeView({
             eyebrow="Your workspace is ready"
             title="Start with a little context."
             description="Add a salary or your first expense when you are ready. For a safe tour of the shell, load synthetic data first."
-            primaryLabel="Load synthetic workspace"
-            onPrimary={onSeed}
-            secondaryLabel="View transactions"
-            onSecondary={() => onNavigate('transactions')}
+            primaryLabel="Add salary"
+            onPrimary={() => onOpenForm('income')}
+            secondaryLabel="Add expense"
+            onSecondary={() => onOpenForm('expense')}
           />
+          <div className="empty-support">
+            <Button variant="quiet" icon="spark" onClick={onSeed}>
+              Load synthetic workspace
+            </Button>
+            <Button variant="quiet" onClick={() => onNavigate('transactions')}>
+              View transactions
+            </Button>
+          </div>
         </section>
       ) : (
         <>
@@ -451,11 +466,11 @@ function HomeView({
             <section className="balance-card">
               <div className="balance-card-top">
                 <span className="card-label">Actual balance</span>
-                <span className="card-kicker">This month</span>
+                <span className="card-kicker">Current workspace</span>
               </div>
               <strong className="balance-value">{money(actualBalance, currency)}</strong>
               <p className="balance-caption">
-                Calculated from your active ledger entries. Planned commitments are shown separately.
+                Calculated from active local records. Planned commitments are reserved separately.
               </p>
               <div className="balance-line">
                 <span />
@@ -488,17 +503,26 @@ function HomeView({
               </div>
               <div className="metric-list">
                 <Metric
-                  label="Spent this month"
-                  value={money(spent, currency)}
+                  label="Recorded income"
+                  value={money(summary?.incomeMinor ?? 0, currency)}
+                  note="Active salary records"
+                />
+                <Metric
+                  label="Recorded spending"
+                  value={money(summary?.spendingMinor ?? 0, currency)}
                   note={`${entries.filter((entry) => entry.type === 'expense').length} expenses`}
                 />
                 <Metric
-                  label="Committed next"
-                  value={money(committed, currency)}
+                  label="Disposable balance"
+                  value={money(summary?.disposableBalanceMinor ?? 0, currency)}
                   note={`${commitments.length} commitments`}
                   accent
                 />
-                <Metric label="Ledger entries" value={String(entries.length)} note="All active records" />
+                <Metric
+                  label="Ledger entries"
+                  value={String(summary?.activeEntryCount ?? entries.length)}
+                  note="Active records"
+                />
               </div>
             </section>
           </div>
@@ -521,7 +545,7 @@ function HomeView({
                 <span className="panel-count">{entries.length}</span>
               </div>
               {entries.slice(0, 5).map((entry) => (
-                <ActivityRow key={entry.id} entry={entry} currency={currency} />
+                <ActivityRow key={entry.id} entry={entry} currency={currency} categories={dataset?.categories} />
               ))}
             </section>
             <section className="panel next-panel">
@@ -550,12 +574,14 @@ function TransactionsView({
   dataset,
   onSeed,
   onNavigate,
-  onNotice,
+  onOpenForm,
+  onRefresh,
 }: {
   dataset: Dataset | null
   onSeed: () => void
   onNavigate: (route: Route) => void
-  onNotice: (notice: Notice) => void
+  onOpenForm: (type?: TransactionKind) => void
+  onRefresh: () => void
 }) {
   const entries = dataset?.entries ?? []
   const currency = dataset?.currency ?? 'INR'
@@ -566,16 +592,7 @@ function TransactionsView({
         title="Transactions"
         description="Every debit and credit in one calm, chronological view."
         action={
-          <Button
-            variant="primary"
-            icon="plus"
-            onClick={() =>
-              onNotice({
-                tone: 'info',
-                text: 'Transaction entry will land in the next ledger slice. The list and empty state are ready.',
-              })
-            }
-          >
+          <Button variant="primary" icon="plus" onClick={() => onOpenForm()}>
             Add transaction
           </Button>
         }
@@ -587,11 +604,19 @@ function TransactionsView({
             eyebrow="No entries yet"
             title="Your ledger is quiet."
             description="When you add income or spending, it will appear here with a date, category, and clear effect on your balance."
-            primaryLabel="Load synthetic workspace"
-            onPrimary={onSeed}
-            secondaryLabel="Back to overview"
-            onSecondary={() => onNavigate('home')}
+            primaryLabel="Add salary"
+            onPrimary={() => onOpenForm('income')}
+            secondaryLabel="Add expense"
+            onSecondary={() => onOpenForm('expense')}
           />
+          <div className="empty-support">
+            <Button variant="quiet" icon="spark" onClick={onSeed}>
+              Load synthetic workspace
+            </Button>
+            <Button variant="quiet" onClick={() => onNavigate('home')}>
+              Back to overview
+            </Button>
+          </div>
         </section>
       ) : (
         <section className="panel table-panel">
@@ -600,19 +625,13 @@ function TransactionsView({
               <h2>All entries</h2>
               <p>{entries.length} records in your local ledger</p>
             </div>
-            <Button
-              variant="quiet"
-              icon="refresh"
-              onClick={() =>
-                onNotice({ tone: 'success', text: 'This shell is ready for live refresh as the ledger flow is added.' })
-              }
-            >
+            <Button variant="quiet" icon="refresh" onClick={onRefresh}>
               Refresh
             </Button>
           </div>
           <div className="transaction-list">
             {entries.map((entry) => (
-              <ActivityRow key={entry.id} entry={entry} currency={currency} />
+              <ActivityRow key={entry.id} entry={entry} currency={currency} categories={dataset?.categories} />
             ))}
           </div>
         </section>
@@ -887,9 +906,11 @@ function SettingsView({
 function App() {
   const [route, setRoute] = useState<Route>(routeFromHash)
   const [dataset, setDataset] = useState<Dataset | null>(null)
+  const [summary, setSummary] = useState<Summary | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [transactionForm, setTransactionForm] = useState<{ type: TransactionKind } | null>(null)
   const importInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -901,12 +922,14 @@ function App() {
   async function refresh() {
     setLoading(true)
     try {
-      const [nextHealth, nextDataset] = await Promise.all([
+      const [nextHealth, nextDataset, nextSummary] = await Promise.all([
         request<Health>('/api/health'),
         request<Dataset>('/api/dataset'),
+        request<Summary>('/api/summary'),
       ])
       setHealth(nextHealth)
       setDataset(nextDataset)
+      setSummary(nextSummary)
     } catch (reason) {
       setNotice({
         tone: 'error',
@@ -922,7 +945,22 @@ function App() {
   }, [])
 
   function navigate(nextRoute: Route) {
+    if (nextRoute !== 'home' && nextRoute !== 'transactions') setTransactionForm(null)
     window.location.hash = nextRoute === 'home' ? '' : nextRoute
+  }
+
+  function openTransactionForm(type: TransactionKind = 'income') {
+    setTransactionForm({ type })
+  }
+
+  async function createTransaction(draft: TransactionDraft) {
+    await request('/api/entries', { method: 'POST', body: JSON.stringify(draft) })
+    setTransactionForm(null)
+    setNotice({
+      tone: 'success',
+      text: draft.type === 'income' ? 'Salary added to your local ledger.' : 'Expense added to your local ledger.',
+    })
+    await refresh()
   }
 
   async function seedSyntheticData() {
@@ -1062,6 +1100,14 @@ function App() {
               </button>
             </div>
           )}
+          {transactionForm && (route === 'home' || route === 'transactions') && (
+            <TransactionForm
+              key={transactionForm.type}
+              defaultType={transactionForm.type}
+              onSubmit={createTransaction}
+              onClose={() => setTransactionForm(null)}
+            />
+          )}
           {loading && !dataset ? (
             <section className="panel loading-panel">
               <span className="status-dot status-dot-teal" />
@@ -1070,17 +1116,19 @@ function App() {
           ) : route === 'home' ? (
             <HomeView
               dataset={dataset}
+              summary={summary}
               health={health}
               onSeed={() => void seedSyntheticData()}
               onNavigate={navigate}
-              onNotice={setNotice}
+              onOpenForm={openTransactionForm}
             />
           ) : route === 'transactions' ? (
             <TransactionsView
               dataset={dataset}
               onSeed={() => void seedSyntheticData()}
               onNavigate={navigate}
-              onNotice={setNotice}
+              onOpenForm={openTransactionForm}
+              onRefresh={() => void refresh()}
             />
           ) : route === 'insights' ? (
             <InsightsView dataset={dataset} onSeed={() => void seedSyntheticData()} onNavigate={navigate} />

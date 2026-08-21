@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { ValidationError, validateRecord } from '../../validation.mjs'
+import { ValidationError, validateRecord, validateTransactionInput } from '../../validation.mjs'
 import { syntheticDataset, syntheticEntry } from '../fixtures/synthetic.mjs'
 
 test('accepts valid synthetic records and preserves extension fields', () => {
@@ -52,5 +52,46 @@ test('rejects a snapshot that references a missing adjustment entry', () => {
         ],
       }),
     (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('adjustmentEntryId')),
+  )
+})
+
+test('validates and normalizes first-slice salary and expense commands', () => {
+  assert.deepEqual(
+    validateTransactionInput({
+      type: 'expense',
+      amountMinor: 125000,
+      occurredOn: '2026-08-21',
+      categoryName: '  Food  ',
+      note: 'Lunch',
+    }),
+    {
+      type: 'expense',
+      amountMinor: 125000,
+      occurredOn: '2026-08-21',
+      categoryName: 'Food',
+      note: 'Lunch',
+      source: undefined,
+    },
+  )
+  assert.deepEqual(validateTransactionInput({ type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01' }), {
+    type: 'income',
+    amountMinor: 10000000,
+    occurredOn: '2026-08-01',
+    categoryName: undefined,
+    note: undefined,
+    source: undefined,
+  })
+})
+
+test('rejects invalid first-slice transaction commands', () => {
+  assert.throws(
+    () => validateTransactionInput({ type: 'expense', amountMinor: 0, occurredOn: '2026-02-30' }),
+    (error) => error instanceof ValidationError && error.details.length >= 3,
+  )
+  assert.throws(
+    () =>
+      validateTransactionInput({ type: 'income', amountMinor: 100, occurredOn: '2026-08-01', categoryName: 'Salary' }),
+    (error) =>
+      error instanceof ValidationError && error.details.includes('categoryName is only supported for expenses'),
   )
 })

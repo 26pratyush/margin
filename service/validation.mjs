@@ -54,6 +54,36 @@ function assertId(record, collection, index, details) {
   assertString(record.id, `${collection}[${index}].id`, details)
 }
 
+function assertOptionalString(value, label, details) {
+  if (value !== undefined && typeof value !== 'string') details.push(`${label} must be a string when provided`)
+}
+
+export function validateTransactionInput(value) {
+  const details = []
+  if (!isRecord(value)) throw new ValidationError('Transaction input must be an object')
+
+  if (!['income', 'expense'].includes(value.type)) details.push('type must be income or expense')
+  assertInteger(value.amountMinor, 'amountMinor', details, { min: 1 })
+  assertDate(value.occurredOn, 'occurredOn', details)
+  assertOptionalString(value.source, 'source', details)
+  assertOptionalString(value.note, 'note', details)
+
+  if (value.type === 'expense') assertString(value.categoryName, 'categoryName', details)
+  if (value.type === 'income' && value.categoryName !== undefined)
+    details.push('categoryName is only supported for expenses')
+
+  if (details.length > 0) throw new ValidationError('Invalid transaction input', details)
+
+  return {
+    type: value.type,
+    amountMinor: value.amountMinor,
+    occurredOn: value.occurredOn,
+    categoryName: value.categoryName?.trim(),
+    source: value.source?.trim(),
+    note: value.note?.trim(),
+  }
+}
+
 export function validateRecord(collection, value, index = 0) {
   if (!COLLECTIONS.includes(collection)) {
     throw new ValidationError(`Unknown collection: ${collection}`)
