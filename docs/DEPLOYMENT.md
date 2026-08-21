@@ -20,7 +20,9 @@ The `app/` workspace contains the Vite application, while the repository root ow
 
 ## GitHub Pages product website
 
-GitHub Pages is reserved for the static product/demo website in `site/`.
+GitHub Pages publishes the static product/demo website from `site/`.
+
+The static product website is built independently from `site/` and deployed by `.github/workflows/site-pages.yml`.
 
 Expected deployment shape:
 
@@ -29,12 +31,12 @@ GitHub main branch
         ↓
 GitHub Actions build
         ↓
-GitHub Pages
+GitHub Pages deployment
         ↓
 Screenshots, product explanation, roadmap, GitHub links
 ```
 
-The site must build independently from the `site/` directory and contain no personal financial data, secrets, application database, finance API, or server-side dependency. Pull requests may build and validate the site, but only the default branch may publish it.
+The site must build independently from the `site/` directory and contain no personal financial data, secrets, application database, finance API, or server-side dependency. Pull requests build and validate the site, but only the default branch publishes it. Configure the repository once with **Settings → Pages → Source: GitHub Actions**.
 
 ## Container policy
 
