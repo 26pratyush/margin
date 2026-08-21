@@ -20,3 +20,20 @@ export function calculateActualBalanceMinor(entries) {
       }
     }, 0)
 }
+
+export function calculateRemainingCommitmentMinor(commitment, entries) {
+  if (!commitment || typeof commitment !== 'object') throw new TypeError('commitment must be an object')
+  if (!Array.isArray(entries)) throw new TypeError('entries must be an array')
+
+  const linkedEntryIds = new Set(Array.isArray(commitment.linkedEntryIds) ? commitment.linkedEntryIds : [])
+  const settledMinor = entries
+    .filter(
+      (entry) =>
+        entry.status === 'active' &&
+        ['expense', 'investment'].includes(entry.type) &&
+        (entry.commitmentId === commitment.id || linkedEntryIds.has(entry.id)),
+    )
+    .reduce((total, entry) => total + entry.amountMinor, 0)
+
+  return Math.max(commitment.plannedAmountMinor - settledMinor, 0)
+}
