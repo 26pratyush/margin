@@ -3,12 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { openStorage } from './storage.mjs'
 import { BackupError } from './backup.mjs'
-import {
-  ConflictError,
-  ValidationError,
-  createSyntheticDataset,
-  collectionNames,
-} from './validation.mjs'
+import { ConflictError, ValidationError, createSyntheticDataset, collectionNames } from './validation.mjs'
 
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 4318
@@ -28,7 +23,10 @@ function isAllowedOrigin(origin) {
   if (!origin) return true
   try {
     const url = new URL(origin)
-    return (url.protocol === 'http:' || url.protocol === 'https:') && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+    )
   } catch {
     return false
   }
@@ -59,11 +57,16 @@ function requireBrowserMutation(request) {
 }
 
 function errorResponse(error) {
-  if (error instanceof ValidationError) return { statusCode: 400, body: { error: error.code, message: error.message, details: error.details } }
+  if (error instanceof ValidationError)
+    return { statusCode: 400, body: { error: error.code, message: error.message, details: error.details } }
   if (error instanceof ConflictError) return { statusCode: 409, body: { error: error.code, message: error.message } }
-  if (error instanceof BackupError) return { statusCode: error.statusCode, body: { error: error.code, message: error.message, details: error.details } }
+  if (error instanceof BackupError)
+    return { statusCode: error.statusCode, body: { error: error.code, message: error.message, details: error.details } }
   if (error.statusCode) return { statusCode: error.statusCode, body: { error: 'FORBIDDEN', message: error.message } }
-  return { statusCode: 500, body: { error: 'INTERNAL_ERROR', message: 'Margin service could not complete the request' } }
+  return {
+    statusCode: 500,
+    body: { error: 'INTERNAL_ERROR', message: 'Margin service could not complete the request' },
+  }
 }
 
 async function handleRequest(request, response, storage) {
@@ -74,7 +77,10 @@ async function handleRequest(request, response, storage) {
   }
 
   const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
-  const segments = url.pathname.split('/').filter(Boolean).map((segment) => decodeURIComponent(segment))
+  const segments = url.pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => decodeURIComponent(segment))
   if (segments[0] !== 'api') {
     sendJson(response, 404, { error: 'NOT_FOUND', message: 'Unknown Margin service route' })
     return
@@ -178,6 +184,9 @@ async function main() {
   process.once('SIGTERM', shutdown)
 }
 
-if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === pathToFileURL(fileURLToPath(import.meta.url)).href) {
+if (
+  process.argv[1] &&
+  pathToFileURL(path.resolve(process.argv[1])).href === pathToFileURL(fileURLToPath(import.meta.url)).href
+) {
   await main()
 }

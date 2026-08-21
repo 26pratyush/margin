@@ -13,24 +13,24 @@ Margin uses a dark, quiet interface that keeps the user's financial information 
 
 ## Color tokens
 
-| Token | Hex | Intended use |
-| --- | --- | --- |
-| `--color-canvas` | `#111413` | Page background |
-| `--color-surface` | `#191D1B` | Sidebar, panels, sections |
-| `--color-surface-raised` | `#222824` | Hero surfaces, selected rows, menus |
-| `--color-surface-hover` | `#29302B` | Hover and pressed surface |
-| `--color-border` | `#323A35` | Quiet dividers and panel borders |
-| `--color-border-strong` | `#465149` | Focused controls and stronger separators |
-| `--color-text` | `#F3F0E8` | Headings and primary values |
-| `--color-text-secondary` | `#B2B7AF` | Supporting labels and body text |
-| `--color-text-muted` | `#858D84` | Metadata, captions, and placeholders |
-| `--color-accent` | `#C9E788` | Primary action, active navigation, selected state |
-| `--color-accent-strong` | `#AFCF69` | Accent bars and chart emphasis |
-| `--color-teal` | `#81C9D0` | Restrained secondary signal and orientation cue |
-| `--color-teal-deep` | `#3C818A` | Teal fills and small chart bars |
-| `--color-positive` | `#A8D6B0` | Income, success, healthy connection |
-| `--color-negative` | `#F0A39B` | Expenses, errors, destructive actions |
-| `--color-warning` | `#E6BE78` | Attention and incomplete setup |
+| Token                    | Hex       | Intended use                                      |
+| ------------------------ | --------- | ------------------------------------------------- |
+| `--color-canvas`         | `#111413` | Page background                                   |
+| `--color-surface`        | `#191D1B` | Sidebar, panels, sections                         |
+| `--color-surface-raised` | `#222824` | Hero surfaces, selected rows, menus               |
+| `--color-surface-hover`  | `#29302B` | Hover and pressed surface                         |
+| `--color-border`         | `#323A35` | Quiet dividers and panel borders                  |
+| `--color-border-strong`  | `#465149` | Focused controls and stronger separators          |
+| `--color-text`           | `#F3F0E8` | Headings and primary values                       |
+| `--color-text-secondary` | `#B2B7AF` | Supporting labels and body text                   |
+| `--color-text-muted`     | `#858D84` | Metadata, captions, and placeholders              |
+| `--color-accent`         | `#C9E788` | Primary action, active navigation, selected state |
+| `--color-accent-strong`  | `#AFCF69` | Accent bars and chart emphasis                    |
+| `--color-teal`           | `#81C9D0` | Restrained secondary signal and orientation cue   |
+| `--color-teal-deep`      | `#3C818A` | Teal fills and small chart bars                   |
+| `--color-positive`       | `#A8D6B0` | Income, success, healthy connection               |
+| `--color-negative`       | `#F0A39B` | Expenses, errors, destructive actions             |
+| `--color-warning`        | `#E6BE78` | Attention and incomplete setup                    |
 
 The complete palette is recorded here even when a first surface only needs a subset. Future screens should consume these semantic tokens rather than introducing new one-off hex values.
 

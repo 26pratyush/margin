@@ -13,7 +13,9 @@ try {
     console.log('Reset Margin local data; unrelated files were not touched.')
   } else if (action === 'status') {
     const dataset = storage.getDataset()
-    console.log(`Margin data: ${dataset.entries.length} entries, ${dataset.commitments.length} commitments (${storage.databasePath})`)
+    console.log(
+      `Margin data: ${dataset.entries.length} entries, ${dataset.commitments.length} commitments (${storage.databasePath})`,
+    )
   } else {
     console.error('Usage: node service/cli.mjs <seed|reset|status>')
     process.exitCode = 1
@@ -21,4 +23,3 @@ try {
 } finally {
   storage.close()
 }
-

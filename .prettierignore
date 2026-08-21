@@ -1,0 +1,9 @@
+node_modules/
+app/dist/
+coverage/
+data/
+app/public/demo-data.json
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*

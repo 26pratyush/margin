@@ -26,4 +26,3 @@ for (const child of children) {
 
 process.once('SIGINT', () => shutdown(0))
 process.once('SIGTERM', () => shutdown(0))
-

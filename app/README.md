@@ -8,8 +8,8 @@ This directory contains the planned local-first finance application.
 - TypeScript for UI, domain contracts, and calculations.
 - Vite for the local development server and static build.
 - Node.js 24 LTS with npm for setup and scripts.
-- Dexie over IndexedDB for local persistence.
-- Vitest and React Testing Library for unit/component checks; Playwright for browser smoke tests.
+- File-backed SQLite through the loopback Node service for local persistence.
+- Node's built-in test runner for service/domain tests; UI and browser tests can be added when the first interactive vertical slice exists.
 
 The app runs from a stable `http://localhost:5173` origin and has no hosted backend or dependency on the product website. Browser storage is local to that origin, so export and restore are part of the product boundary.
 
@@ -20,7 +20,7 @@ npm ci
 npm run dev
 ```
 
-The app is served at `http://localhost:5173`. Additional commands are:
+The app is served at `http://localhost:5173`. Root-level quality commands are documented in [Testing and quality gates](../docs/TESTING.md). Additional app commands are:
 
 ```bash
 npm run check
@@ -30,4 +30,4 @@ npm run demo:seed
 npm run demo:reset
 ```
 
-The demo commands use synthetic records only. They create or remove the explicitly ignored `app/public/demo-data.json` file; they do not touch browser persistence or unrelated files. Dexie/IndexedDB persistence and its reset flow belong to MARGIN-006. Desktop wrappers and containers remain optional follow-up packaging paths.
+The demo commands use synthetic records only. They create or remove the explicitly ignored `app/public/demo-data.json` file; they do not touch local SQLite persistence or unrelated files. Desktop wrappers and containers remain optional follow-up packaging paths.

@@ -55,7 +55,9 @@ async function status() {
 
   try {
     const fixture = JSON.parse(await readFile(generatedPath, 'utf8'))
-    console.log(`Synthetic demo data is seeded (${fixture.entries.length} entries, ${fixture.commitments.length} commitments).`)
+    console.log(
+      `Synthetic demo data is seeded (${fixture.entries.length} entries, ${fixture.commitments.length} commitments).`,
+    )
   } catch (error) {
     if (error?.code === 'ENOENT') {
       console.log('Synthetic demo data is not seeded.')

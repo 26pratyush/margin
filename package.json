@@ -15,7 +15,12 @@
     "dev": "node scripts/dev.mjs",
     "build": "npm --workspace app run build",
     "check": "npm --workspace app run check",
-    "test": "node --test service/*.test.mjs",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "eslint . --max-warnings=0",
+    "test": "node --test \"service/tests/**/*.test.mjs\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"service/**/*.mjs\" --test-coverage-exclude=\"service/tests/**/*.mjs\" --test-coverage-lines=80 --test-coverage-branches=60 --test-coverage-functions=85 \"service/tests/**/*.test.mjs\"",
+    "quality": "npm run format:check && npm run lint && npm run test:coverage && npm run check && npm run build",
     "preview": "npm --workspace app run preview",
     "data:seed": "node service/cli.mjs seed",
     "data:reset": "node service/cli.mjs reset",
@@ -23,5 +28,13 @@
     "demo:seed": "node scripts/demo.mjs seed",
     "demo:reset": "node scripts/demo.mjs reset",
     "demo:status": "node scripts/demo.mjs status"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.1",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.11.0",
+    "prettier": "3.9.6",
+    "typescript-eslint": "8.67.0"
   }
 }

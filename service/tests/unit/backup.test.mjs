@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { BackupError, createBackupEnvelope, decodeBackup } from './backup.mjs'
-import { createSyntheticDataset } from './validation.mjs'
+import { BackupError, createBackupEnvelope, decodeBackup } from '../../backup.mjs'
+import { createSyntheticDataset } from '../../validation.mjs'
 
 test('creates a versioned canonical backup with a stable integrity digest', () => {
   const dataset = createSyntheticDataset()
@@ -37,17 +37,23 @@ test('rejects a modified backup before it reaches storage', () => {
   const backup = createBackupEnvelope(createSyntheticDataset(), { exportedAt: '2026-08-20T10:00:00.000Z' })
   const tampered = { ...backup, data: { ...backup.data, entries: [] } }
 
-  assert.throws(() => decodeBackup(tampered), (error) => {
-    assert.equal(error instanceof BackupError, true)
-    assert.equal(error.code, 'BACKUP_INTEGRITY_ERROR')
-    return true
-  })
+  assert.throws(
+    () => decodeBackup(tampered),
+    (error) => {
+      assert.equal(error instanceof BackupError, true)
+      assert.equal(error.code, 'BACKUP_INTEGRITY_ERROR')
+      return true
+    },
+  )
 })
 
 test('rejects backup versions newer than the current app', () => {
-  assert.throws(() => decodeBackup({ format: 'margin-backup', formatVersion: 99 }), (error) => {
-    assert.equal(error instanceof BackupError, true)
-    assert.equal(error.code, 'UNSUPPORTED_BACKUP_VERSION')
-    return true
-  })
+  assert.throws(
+    () => decodeBackup({ format: 'margin-backup', formatVersion: 99 }),
+    (error) => {
+      assert.equal(error instanceof BackupError, true)
+      assert.equal(error.code, 'UNSUPPORTED_BACKUP_VERSION')
+      return true
+    },
+  )
 })

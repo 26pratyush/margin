@@ -54,6 +54,7 @@ margin/
 - [Development workflow](docs/GITHUB_WORKFLOW.md)
 - [Deployment boundary](docs/DEPLOYMENT.md)
 - [Local data and backup](docs/LOCAL_DATA.md)
+- [Testing and quality gates](docs/TESTING.md)
 - [Design system](docs/DESIGN_SYSTEM.md)
 - [Stack decision](docs/decisions/ADR-001-local-browser-stack.md)
 - [GitHub bootstrap checklist](docs/GITHUB_BOOTSTRAP.md)
@@ -82,6 +83,7 @@ Useful commands:
 npm run check        # TypeScript validation
 npm run build        # Static production build
 npm test             # Local storage and service tests
+npm run quality      # Formatting, lint, tests, coverage, type-check, and build
 npm run preview      # Preview the production build locally
 npm run data:status  # Show the local SQLite data path and record counts
 npm run data:seed    # Replace local records with synthetic data

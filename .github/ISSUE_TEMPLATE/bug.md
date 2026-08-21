@@ -1,8 +1,8 @@
 ---
 name: Bug report
 about: Report incorrect or broken behavior
-title: "[BUG] "
-labels: ["bug"]
+title: '[BUG] '
+labels: ['bug']
 ---
 
 ## Summary

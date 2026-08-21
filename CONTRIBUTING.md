@@ -21,9 +21,10 @@ npm run dev
 Before opening a Pull Request, run at least:
 
 ```bash
-npm run check
-npm run build
+npm run quality
 ```
+
+The quality command runs formatting, linting, service/domain tests with coverage thresholds, TypeScript validation, and the production build. Keep unit tests separate from storage/HTTP integration tests as described in [Testing and quality gates](docs/TESTING.md).
 
 The synthetic demo path is available through `npm run demo:seed` and `npm run demo:reset`. It operates only on the generated `app/public/demo-data.json` file. Never place real financial records in the demo fixture, repository, screenshots, or issues.
 

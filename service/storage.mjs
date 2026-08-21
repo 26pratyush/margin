@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { BackupError, createBackupEnvelope, decodeBackup, validateBackup as validateBackupDocument } from './backup.mjs'
+import { createBackupEnvelope, decodeBackup, validateBackup as validateBackupDocument } from './backup.mjs'
+import { calculateActualBalanceMinor } from './domain/calculations.mjs'
 import {
   ConflictError,
   createEmptyDataset,
@@ -33,9 +34,14 @@ const MIGRATIONS = [
   },
 ]
 
-export function defaultDataDirectory(platform = process.platform, homeDirectory = os.homedir(), environment = process.env) {
+export function defaultDataDirectory(
+  platform = process.platform,
+  homeDirectory = os.homedir(),
+  environment = process.env,
+) {
   if (platform === 'darwin') return path.join(homeDirectory, 'Library', 'Application Support', 'Margin')
-  if (platform === 'win32') return path.join(environment.LOCALAPPDATA || path.join(homeDirectory, 'AppData', 'Local'), 'Margin')
+  if (platform === 'win32')
+    return path.join(environment.LOCALAPPDATA || path.join(homeDirectory, 'AppData', 'Local'), 'Margin')
   return path.join(environment.XDG_DATA_HOME || path.join(homeDirectory, '.local', 'share'), 'margin')
 }
 
@@ -43,7 +49,8 @@ function resolveDataDirectory(explicitDirectory) {
   const candidate = explicitDirectory || process.env.MARGIN_DATA_DIR || defaultDataDirectory()
   if (!path.isAbsolute(candidate)) throw new Error('MARGIN_DATA_DIR must be an absolute path')
   const resolved = path.resolve(candidate)
-  if (resolved === path.parse(resolved).root) throw new Error('Refusing to use a filesystem root as Margin data directory')
+  if (resolved === path.parse(resolved).root)
+    throw new Error('Refusing to use a filesystem root as Margin data directory')
   return resolved
 }
 
@@ -118,7 +125,8 @@ export class MarginStorage {
 
   createRecord(collection, record) {
     validateRecord(collection, record)
-    if (this.getRecord(collection, record.id)) throw new ConflictError(`${collection} record ${record.id} already exists`)
+    if (this.getRecord(collection, record.id))
+      throw new ConflictError(`${collection} record ${record.id} already exists`)
     this.database
       .prepare('INSERT INTO records (collection, record_id, payload_json, updated_at) VALUES (?, ?, ?, ?)')
       .run(collection, record.id, JSON.stringify(record), now())
@@ -137,7 +145,9 @@ export class MarginStorage {
 
   deleteRecord(collection, id) {
     if (!collectionNames().includes(collection)) throw new Error(`Unknown collection: ${collection}`)
-    const result = this.database.prepare('DELETE FROM records WHERE collection = ? AND record_id = ?').run(collection, id)
+    const result = this.database
+      .prepare('DELETE FROM records WHERE collection = ? AND record_id = ?')
+      .run(collection, id)
     return result.changes > 0
   }
 
@@ -199,13 +209,7 @@ export class MarginStorage {
   }
 
   getActualBalance() {
-    return this.getCollection('entries')
-      .filter((entry) => entry.status === 'active')
-      .reduce((total, entry) => {
-        if (entry.type === 'income' || entry.type === 'refund') return total + entry.amountMinor
-        if (entry.type === 'adjustment' && entry.direction === 'credit') return total + entry.amountMinor
-        return total - entry.amountMinor
-      }, 0)
+    return calculateActualBalanceMinor(this.getCollection('entries'))
   }
 
   reconcile({ asOf, realBalanceMinor, note } = {}) {
@@ -281,7 +285,9 @@ export async function openStorage({ dataDirectory } = {}) {
   await makePrivateDirectory(resolvedDirectory)
   const databasePath = path.join(resolvedDirectory, 'margin.sqlite')
   const database = new DatabaseSync(databasePath)
-  database.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;')
+  database.exec(
+    'PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;',
+  )
   database.exec('CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)')
 
   const currentRow = database.prepare('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1').get()
@@ -290,7 +296,9 @@ export async function openStorage({ dataDirectory } = {}) {
     database.exec('BEGIN IMMEDIATE')
     try {
       for (const statement of migration.statements) database.exec(statement)
-      database.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)').run(migration.version, now())
+      database
+        .prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+        .run(migration.version, now())
       database.exec('COMMIT')
     } catch (error) {
       database.exec('ROLLBACK')

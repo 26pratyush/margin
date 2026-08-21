@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { createMarginServer } from './server.mjs'
+import { createMarginServer } from '../../server.mjs'
 
 async function startServer(directory) {
   const context = await createMarginServer({ dataDirectory: directory })
@@ -47,6 +47,32 @@ test('rejects mutating requests without the browser client header', async () => 
   }
 })
 
+test('returns readable errors for malformed JSON, disallowed origins, and unknown routes', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-errors-test-'))
+  const context = await startServer(directory)
+  try {
+    const malformed = await fetch(`${context.url}/api/reconcile`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: '{',
+    })
+    const malformedBody = await malformed.json()
+    assert.equal(malformed.status, 400)
+    assert.equal(malformedBody.error, 'VALIDATION_ERROR')
+
+    const disallowed = await fetch(`${context.url}/api/health`, { headers: { Origin: 'https://example.com' } })
+    assert.equal(disallowed.status, 403)
+
+    const unknown = await fetch(`${context.url}/api/not-a-route`)
+    const unknownBody = await unknown.json()
+    assert.equal(unknown.status, 404)
+    assert.equal(unknownBody.error, 'NOT_FOUND')
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('previews and restores a versioned backup through the HTTP boundary', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-backup-test-'))
   const context = await startServer(directory)
@@ -55,11 +81,19 @@ test('previews and restores a versioned backup through the HTTP boundary', async
     const backup = await fetch(`${context.url}/api/backup`).then((response) => response.json())
     assert.equal(backup.formatVersion, 2)
 
-    const preview = await fetch(`${context.url}/api/backup/validate`, { method: 'POST', headers: clientHeaders(), body: JSON.stringify(backup) }).then((response) => response.json())
+    const preview = await fetch(`${context.url}/api/backup/validate`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify(backup),
+    }).then((response) => response.json())
     assert.equal(preview.counts.entries, 2)
 
     await fetch(`${context.url}/api/reset`, { method: 'POST', headers: clientHeaders(), body: '{}' })
-    const restored = await fetch(`${context.url}/api/backup/restore`, { method: 'POST', headers: clientHeaders(), body: JSON.stringify(backup) }).then((response) => response.json())
+    const restored = await fetch(`${context.url}/api/backup/restore`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify(backup),
+    }).then((response) => response.json())
     assert.equal(restored.summary.recoverySnapshotCreated, true)
 
     const dataset = await fetch(`${context.url}/api/dataset`).then((response) => response.json())
