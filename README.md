@@ -36,7 +36,7 @@ Margin is intentionally local-first:
 margin/
 ├── app/                 # Local finance application; implementation starts here
 ├── site/                # Static product/demo website for GitHub Pages
-├── assets/screenshots/  # Approved product screenshots for the demo site
+├── site/public/screenshots/ # Synthetic product screenshots for the demo site
 ├── docs/                # Versioned project and technical context
 ├── project/             # Roadmap, epics, task briefs, dependencies, labels
 ├── wiki/                # Wiki-ready Markdown pages
@@ -56,6 +56,7 @@ margin/
 - [Local data and backup](docs/LOCAL_DATA.md)
 - [Testing and quality gates](docs/TESTING.md)
 - [Design system](docs/DESIGN_SYSTEM.md)
+- [Product website](site/README.md)
 - [Stack decision](docs/decisions/ADR-001-local-browser-stack.md)
 - [GitHub bootstrap checklist](docs/GITHUB_BOOTSTRAP.md)
 - [Roadmap](project/ROADMAP.md)
@@ -113,7 +114,7 @@ The v0.1 application stack and local persistence decision are recorded in the [s
 ## Delivery and release boundary
 
 - The finance application runs locally and is never deployed with the public website.
-- The static product/demo website will be built from `site/` and published to GitHub Pages through GitHub Actions once it has a real build.
+- The static product/demo website is built from `site/` and published to GitHub Pages through GitHub Actions.
 - Versioned software releases use Git tags and GitHub Releases. They must contain source or synthetic build artifacts only.
 - Containers are optional development and packaging tooling. Any reproducible container setup belongs to `MARGIN-004`.
 
