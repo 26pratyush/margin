@@ -34,3 +34,9 @@ Local records use IndexedDB through Dexie behind a persistence interface. JSON i
 ## D-006 — Reconciliation is an explicit adjustment
 
 Margin compares the real account balance to calculated actual cash, not disposable balance after commitments. The difference is recorded as a linked reconciliation adjustment so omitted small transactions are visible without being falsely reconstructed.
+
+## D-007 — Monthly planning separates held, arriving, moved, committed, and available money
+
+Margin's first planning loop uses local calendar-month cycles. Opening actual balance is derived from active ledger movements before the cycle; actual salary is counted only when an income entry occurs; expected salary is informational until then; and rollover uses actual closing cash rather than disposable balance. Remaining commitments are reserved after actual cash is calculated, so planned money is not mistaken for money already spent.
+
+The normative rules and synthetic examples are recorded in [ADR-003 — Monthly planning and rollover rules](../docs/decisions/ADR-003-monthly-planning-and-rollover.md).

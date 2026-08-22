@@ -67,6 +67,9 @@ At any point in a pay period, the user should be able to answer:
 - **Reconciliation:** a comparison between calculated actual balance and the real account balance entered by the user.
 - **Disposable balance:** income minus expenses and commitments for the selected period.
 - **Period:** a week, month, or custom date range used for summaries.
+- **Planning cycle:** a local calendar-month range `[start, end)` used to compare opening actual cash, expected and actual salary, movement, commitments, and disposable balance.
+- **Expected salary:** a planning fact that does not affect actual cash until an active income entry is recorded.
+- **Rollover:** the previous cycle's actual closing balance becoming the next cycle's opening actual balance; disposable balance and commitment reservations are not treated as new income.
 
 ## Current decisions
 
@@ -84,6 +87,7 @@ At any point in a pay period, the user should be able to answer:
 - JSON is the lossless backup format and CSV is a secondary interoperability export.
 - The domain model separates actual ledger entries, planned commitments, and reconciliation snapshots.
 - Reconciliation compares real account balance to actual cash, then records a separate adjustment for untracked activity; commitments are applied afterward to derive disposable balance.
+- Monthly planning uses local calendar-month cycles. Opening and closing actual balances are derived from active ledger movements; expected salary is kept separate until an actual income entry exists; remaining commitments are applied afterward to derive disposable balance.
 - v0.1 uses one local ledger currency, defaulting to INR with two decimal places, and does not support FX conversion.
 
 ## Open decisions
@@ -95,3 +99,5 @@ At any point in a pay period, the user should be able to answer:
 ## Working rule for future chats
 
 Before changing code, identify the relevant epic and task, read this file plus the task brief, and update the project documentation if a decision changes. Do not invent a hosted backend or cloud data path without explicitly revisiting the local-first boundary.
+
+The monthly planning and rollover rules are recorded in [ADR-003](decisions/ADR-003-monthly-planning-and-rollover.md) and are implemented incrementally through EPIC-002.
