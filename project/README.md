@@ -8,10 +8,12 @@ This directory contains versioned planning resources that support the GitHub Iss
 - [Project tracking setup](TRACKING.md)
 - [Dependency waves](DEPENDENCIES.md)
 - [Label definitions](LABELS.md)
-- [Epic index](epics/EPIC-001-foundation.md)
+- [Epic index: EPIC-001 foundation](epics/EPIC-001-foundation.md)
+- [Epic index: EPIC-002 core tracking and salary planning](epics/EPIC-002-core-tracking-and-salary-planning.md)
 - [Task briefs](tasks/README.md)
 - [Stack decision](../docs/decisions/ADR-001-local-browser-stack.md)
 - [Domain model decision](../docs/decisions/ADR-002-domain-model-and-balance-rules.md)
+- [Monthly planning decision](../docs/decisions/ADR-003-monthly-planning-and-rollover.md)
 
 ## How to use these files
 

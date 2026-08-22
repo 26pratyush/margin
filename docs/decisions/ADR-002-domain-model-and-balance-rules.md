@@ -15,6 +15,7 @@ The model is framework-independent. React, persistence adapters, and UI componen
 - Persist every amount as a positive integer number of minor units; never use floating-point arithmetic for money.
 - v0.1 uses one currency per local ledger, defaulting to INR with two decimal places. Mixed currencies and FX conversion are out of scope.
 - Use local civil dates in `YYYY-MM-DD`; do not convert financial dates through UTC.
+- `YYYY-MM-DD` is the canonical persisted, domain, API, and backup representation. User-facing views should format dates according to the user's locale; for an Indian locale, that presentation is `DD/MM/YYYY`.
 - Period ranges are inclusive at the start and exclusive at the end: `[start, end)`.
 - A monthly salary belongs to the calendar month containing its actual `occurredOn` date. A late or early payment is not silently moved to another month.
 - Zero-value ledger entries are rejected. Zero balances and negative balances are valid results.
