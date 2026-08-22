@@ -15,7 +15,8 @@ The planning view is a derived view over the existing ledger, commitment, reconc
 
 - A cycle is identified by a calendar month key such as `2026-08`.
 - The cycle range is `[2026-08-01, 2026-09-01)`: inclusive at the start and exclusive at the next cycle start.
-- Financial dates are local civil dates in `YYYY-MM-DD`. No planning value is shifted through UTC.
+- Financial dates are local civil dates in canonical `YYYY-MM-DD` form for storage, domain values, APIs, and backups. The user-facing UI formats them according to locale, including `DD/MM/YYYY` for India.
+- No planning value is shifted through UTC.
 - Actual salary belongs to the cycle containing its actual `occurredOn` date. An expected payment date does not reassign a late receipt to an earlier cycle.
 - A future non-calendar salary period is out of scope for this slice.
 

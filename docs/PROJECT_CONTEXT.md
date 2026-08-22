@@ -88,6 +88,7 @@ At any point in a pay period, the user should be able to answer:
 - The domain model separates actual ledger entries, planned commitments, and reconciliation snapshots.
 - Reconciliation compares real account balance to actual cash, then records a separate adjustment for untracked activity; commitments are applied afterward to derive disposable balance.
 - Monthly planning uses local calendar-month cycles. Opening and closing actual balances are derived from active ledger movements; expected salary is kept separate until an actual income entry exists; remaining commitments are applied afterward to derive disposable balance.
+- Financial dates remain canonical as ISO `YYYY-MM-DD` in storage, domain values, APIs, and backups; the UI formats them for the user's locale, including `DD/MM/YYYY` for India.
 - v0.1 uses one local ledger currency, defaulting to INR with two decimal places, and does not support FX conversion.
 
 ## Open decisions

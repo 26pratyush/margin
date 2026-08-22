@@ -16,7 +16,8 @@ Define the smallest trustworthy meaning of a monthly planning cycle before addin
 
 - A cycle is identified by a local calendar month, such as `2026-08`.
 - Its range is `[2026-08-01, 2026-09-01)`: inclusive at the start and exclusive at the next cycle start.
-- Dates remain local civil dates in `YYYY-MM-DD`; no salary or balance date is shifted through UTC.
+- Dates remain local civil dates in canonical `YYYY-MM-DD` form for storage, domain values, APIs, and backups; the UI should present them according to locale, including `DD/MM/YYYY` for India.
+- No salary or balance date is shifted through UTC.
 - The cycle starts and ends by calendar date, not by the date on which a user opens the app or by an inferred pay-period boundary.
 
 ### Opening balance and rollover
