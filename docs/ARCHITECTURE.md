@@ -49,10 +49,13 @@ The first domain model includes:
 - `Commitment`
 - `BalanceSnapshot`
 - `PeriodSummary`
+- `PlanningCycle` inputs for a local calendar month
 
 The model preserves local dates and integer minor-unit amounts as first-class values. Actual ledger entries and planned commitments are separate concepts. Reconciliation snapshots compare calculated actual cash with a real balance and create explicit adjustment entries for the difference.
 
 The calculation layer must expose actual closing balance and disposable balance separately. Disposable balance applies remaining commitment reservations after actual cash has been reconciled; it must never be used as the input to reconciliation.
+
+Planning-cycle calculations are an additional derived domain boundary over the same entries and commitments. A cycle persists only its identity, expected salary inputs, and timestamps. Opening actual cash comes from active entries before the cycle, actual salary comes from active income entries inside the cycle, and closing/disposable values are calculated rather than duplicated in storage.
 
 ## Data safety requirements
 

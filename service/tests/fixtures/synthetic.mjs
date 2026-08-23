@@ -11,12 +11,19 @@ export function syntheticEntry(overrides = {}) {
   }
 }
 
-export function syntheticDataset({ entries = [], categories = [], commitments = [], balanceSnapshots = [] } = {}) {
+export function syntheticDataset({
+  entries = [],
+  categories = [],
+  commitments = [],
+  balanceSnapshots = [],
+  planningCycles = [],
+} = {}) {
   return validateDataset({
     ...createEmptyDataset(),
     entries,
     categories,
     commitments,
     balanceSnapshots,
+    planningCycles,
   })
 }

@@ -1,4 +1,7 @@
-const COLLECTIONS = ['entries', 'categories', 'commitments', 'balanceSnapshots']
+import { cycleBounds } from './domain/planning.mjs'
+
+const COLLECTIONS = ['entries', 'categories', 'commitments', 'balanceSnapshots', 'planningCycles']
+export const CURRENT_SCHEMA_VERSION = 2
 
 const ENTRY_TYPES = ['income', 'expense', 'investment', 'refund', 'adjustment']
 const ENTRY_STATUSES = ['active', 'voided']
@@ -19,6 +22,15 @@ export class ConflictError extends Error {
     super(message)
     this.name = 'ConflictError'
     this.code = 'CONFLICT'
+  }
+}
+
+export class NotFoundError extends Error {
+  constructor(message) {
+    super(message)
+    this.name = 'NotFoundError'
+    this.code = 'NOT_FOUND'
+    this.statusCode = 404
   }
 }
 
@@ -56,6 +68,79 @@ function assertId(record, collection, index, details) {
 
 function assertOptionalString(value, label, details) {
   if (value !== undefined && typeof value !== 'string') details.push(`${label} must be a string when provided`)
+}
+
+function assertTimestamp(value, label, details) {
+  const isTimestamp = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
+  if (!isTimestamp || Number.isNaN(Date.parse(value))) {
+    details.push(`${label} must be a valid ISO timestamp`)
+    return
+  }
+
+  const parsed = new Date(value)
+  const normalized = value.includes('.') ? parsed.toISOString() : `${parsed.toISOString().slice(0, 19)}Z`
+  if (normalized !== value) {
+    details.push(`${label} must be a real calendar timestamp`)
+  }
+}
+
+function validateExpectedSalaryFields(value, label, details, { requireSalaryForDate = true } = {}) {
+  if (value.expectedSalaryMinor !== undefined)
+    assertInteger(value.expectedSalaryMinor, `${label}.expectedSalaryMinor`, details, { min: 1 })
+  if (value.expectedSalaryOn !== undefined) assertDate(value.expectedSalaryOn, `${label}.expectedSalaryOn`, details)
+  if (requireSalaryForDate && value.expectedSalaryOn !== undefined && value.expectedSalaryMinor === undefined) {
+    details.push(`${label}.expectedSalaryOn requires expectedSalaryMinor`)
+  }
+}
+
+export function validatePlanningCycleInput(value) {
+  if (!isRecord(value)) throw new ValidationError('Planning cycle input must be an object')
+
+  const details = []
+  assertString(value.cycleKey, 'cycleKey', details)
+  let bounds
+  try {
+    bounds = cycleBounds(value.cycleKey)
+  } catch {
+    bounds = null
+  }
+  if (!bounds) details.push('cycleKey must identify a supported calendar month')
+  validateExpectedSalaryFields(value, 'planning cycle', details)
+  if (value.expectedSalaryOn !== undefined && bounds) {
+    if (value.expectedSalaryOn < bounds.startOn || value.expectedSalaryOn >= bounds.endOn) {
+      details.push('planning cycle expectedSalaryOn must fall within the cycle')
+    }
+  }
+
+  const allowedKeys = new Set(['cycleKey', 'expectedSalaryMinor', 'expectedSalaryOn'])
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) details.push(`planning cycle field ${key} is not writable`)
+  }
+
+  if (details.length > 0) throw new ValidationError('Invalid planning cycle input', details)
+
+  return {
+    cycleKey: value.cycleKey,
+    ...(value.expectedSalaryMinor !== undefined ? { expectedSalaryMinor: value.expectedSalaryMinor } : {}),
+    ...(value.expectedSalaryOn !== undefined ? { expectedSalaryOn: value.expectedSalaryOn } : {}),
+  }
+}
+
+export function validatePlanningCyclePatch(value) {
+  if (!isRecord(value)) throw new ValidationError('Planning cycle update must be an object')
+
+  const details = []
+  validateExpectedSalaryFields(value, 'planning cycle', details, { requireSalaryForDate: false })
+  const allowedKeys = new Set(['expectedSalaryMinor', 'expectedSalaryOn'])
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) details.push(`planning cycle field ${key} is not writable during update`)
+  }
+  if (details.length > 0) throw new ValidationError('Invalid planning cycle update', details)
+
+  return {
+    ...(value.expectedSalaryMinor !== undefined ? { expectedSalaryMinor: value.expectedSalaryMinor } : {}),
+    ...(value.expectedSalaryOn !== undefined ? { expectedSalaryOn: value.expectedSalaryOn } : {}),
+  }
 }
 
 export function validateTransactionInput(value) {
@@ -125,6 +210,31 @@ export function validateRecord(collection, value, index = 0) {
     assertInteger(value.differenceMinor, `${collection}[${index}].differenceMinor`, details)
     if (value.adjustmentEntryId !== undefined)
       assertString(value.adjustmentEntryId, `${collection}[${index}].adjustmentEntryId`, details)
+  }
+
+  if (collection === 'planningCycles') {
+    assertString(value.cycleKey, `${collection}[${index}].cycleKey`, details)
+    let bounds
+    try {
+      bounds = cycleBounds(value.cycleKey)
+    } catch {
+      bounds = null
+    }
+    if (!bounds) {
+      details.push(`${collection}[${index}].cycleKey must identify a supported calendar month`)
+    } else {
+      if (value.id !== value.cycleKey) details.push(`${collection}[${index}].id must match cycleKey`)
+      if (value.startOn !== bounds.startOn) details.push(`${collection}[${index}].startOn must match cycleKey`)
+      if (value.endOn !== bounds.endOn) details.push(`${collection}[${index}].endOn must match cycleKey`)
+    }
+    validateExpectedSalaryFields(value, `${collection}[${index}]`, details)
+    if (value.expectedSalaryOn !== undefined && bounds) {
+      if (value.expectedSalaryOn < bounds.startOn || value.expectedSalaryOn >= bounds.endOn) {
+        details.push(`${collection}[${index}].expectedSalaryOn must fall within the cycle`)
+      }
+    }
+    assertTimestamp(value.createdAt, `${collection}[${index}].createdAt`, details)
+    assertTimestamp(value.updatedAt, `${collection}[${index}].updatedAt`, details)
   }
 
   if (details.length > 0) {
@@ -203,7 +313,7 @@ export function createEmptyDataset() {
   return {
     format: 'margin-backup',
     formatVersion: 1,
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     appVersion: '0.1.0',
     exportedAt: new Date().toISOString(),
     currency: 'INR',
@@ -212,6 +322,7 @@ export function createEmptyDataset() {
     categories: [],
     commitments: [],
     balanceSnapshots: [],
+    planningCycles: [],
   }
 }
 
@@ -252,6 +363,18 @@ export function createSyntheticDataset() {
       },
     ],
     balanceSnapshots: [],
+    planningCycles: [
+      {
+        id: '2026-08',
+        cycleKey: '2026-08',
+        startOn: '2026-08-01',
+        endOn: '2026-09-01',
+        expectedSalaryMinor: 10000000,
+        expectedSalaryOn: '2026-08-01',
+        createdAt: '2026-08-01T00:00:00.000Z',
+        updatedAt: '2026-08-01T00:00:00.000Z',
+      },
+    ],
   })
 }
 

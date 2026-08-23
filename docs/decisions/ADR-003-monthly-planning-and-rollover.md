@@ -1,6 +1,6 @@
 # ADR-003 — Monthly planning and rollover rules
 
-- Status: Accepted for implementation planning
+- Status: Accepted; implemented incrementally through MARGIN-012
 - Date: 2026-08-22
 - Issue: [MARGIN-011](https://github.com/26pratyush/margin/issues/24)
 - Parent: [EPIC-002](https://github.com/26pratyush/margin/issues/22)
@@ -104,6 +104,8 @@ The following remain derived from existing facts:
 - Salary status and variance.
 
 The exact persistence migration, validation, repository boundary, and backup compatibility belong to `MARGIN-012`. This decision does not authorize a general allocation engine or recurring salary automation.
+
+`MARGIN-012` implements the minimum `planningCycles` persistence collection and derives all balance and salary outcomes from existing ledger and commitment facts. The UI and allocation workspace remain separate follow-up work.
 
 ## Golden synthetic examples
 

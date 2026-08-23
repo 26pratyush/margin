@@ -22,6 +22,7 @@ npm run quality         # Run the complete local quality gate
 Tests are separated by the boundary they exercise:
 
 - `service/tests/unit/` tests pure calculations, validation, and backup transformations without SQLite or HTTP.
+- `service/tests/unit/planning.test.mjs` covers calendar-cycle boundaries, rollover, salary states, commitments, and signed balances.
 - `service/tests/integration/` tests the SQLite storage adapter and loopback HTTP API using temporary directories.
 - `service/tests/fixtures/` contains reusable synthetic financial records only.
 - `app/src/**/*.test.{ts,tsx}` tests browser-side amount/date helpers and interactive form behavior with Vitest and Testing Library.
