@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
-import { validateDataset } from './validation.mjs'
+import { CURRENT_SCHEMA_VERSION, validateDataset } from './validation.mjs'
 
 const BACKUP_FORMAT = 'margin-backup'
 const CURRENT_FORMAT_VERSION = 2
-const COLLECTIONS = ['entries', 'categories', 'commitments', 'balanceSnapshots']
+const COLLECTIONS = ['entries', 'categories', 'commitments', 'balanceSnapshots', 'planningCycles']
 
 export class BackupError extends Error {
   constructor(code, message, details = []) {
@@ -42,7 +42,15 @@ function sortCollection(records) {
 }
 
 function cloneDataset(dataset) {
-  return validateDataset({ ...dataset, formatVersion: 1 })
+  const schemaVersion = Number.isSafeInteger(dataset.schemaVersion)
+    ? Math.max(dataset.schemaVersion, CURRENT_SCHEMA_VERSION)
+    : dataset.schemaVersion
+  return validateDataset({
+    ...dataset,
+    formatVersion: 1,
+    schemaVersion,
+    planningCycles: dataset.planningCycles === undefined ? [] : dataset.planningCycles,
+  })
 }
 
 function summaryFor(dataset, sourceFormatVersion, warnings = []) {
@@ -91,7 +99,8 @@ function migrateV2ToDataset(input) {
     throw new BackupError('BACKUP_VALIDATION_ERROR', 'Backup data must be an object containing the dataset collections')
   }
 
-  const missing = COLLECTIONS.filter((collection) => !Array.isArray(input.data[collection]))
+  const requiredCollections = COLLECTIONS.filter((collection) => collection !== 'planningCycles')
+  const missing = requiredCollections.filter((collection) => !Array.isArray(input.data[collection]))
   if (missing.length > 0) {
     throw new BackupError('BACKUP_VALIDATION_ERROR', `Backup data is missing collections: ${missing.join(', ')}`)
   }
@@ -104,7 +113,9 @@ function migrateV2ToDataset(input) {
     exportedAt: input.exportedAt,
     currency: input.currency,
     extensions: input.extensions,
-    ...Object.fromEntries(COLLECTIONS.map((collection) => [collection, input.data[collection]])),
+    ...Object.fromEntries(
+      COLLECTIONS.map((collection) => [collection, input.data[collection] === undefined ? [] : input.data[collection]]),
+    ),
   }
 }
 

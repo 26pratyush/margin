@@ -5,12 +5,17 @@ import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { createBackupEnvelope, decodeBackup, validateBackup as validateBackupDocument } from './backup.mjs'
 import { calculateActualBalanceMinor } from './domain/calculations.mjs'
+import { calculatePlanningCycleSummary, cycleBounds, localDateToday } from './domain/planning.mjs'
 import { calculateLedgerSummary } from './domain/summary.mjs'
 import {
   ConflictError,
+  CURRENT_SCHEMA_VERSION,
   createEmptyDataset,
   collectionNames,
+  NotFoundError,
   validateDataset,
+  validatePlanningCycleInput,
+  validatePlanningCyclePatch,
   validateRecord,
   validateTransactionInput,
   ValidationError,
@@ -33,6 +38,10 @@ const MIGRATIONS = [
         value_json TEXT NOT NULL
       )`,
     ],
+  },
+  {
+    version: 2,
+    statements: [`ALTER TABLE records ADD COLUMN schema_version INTEGER NOT NULL DEFAULT 1`],
   },
 ]
 
@@ -79,6 +88,10 @@ function parseJson(value, label) {
   } catch {
     throw new Error(`Stored ${label} is not valid JSON`)
   }
+}
+
+function recordSchemaVersion(collection) {
+  return collection === 'planningCycles' ? CURRENT_SCHEMA_VERSION : 1
 }
 
 export class MarginStorage {
@@ -130,19 +143,36 @@ export class MarginStorage {
     if (this.getRecord(collection, record.id))
       throw new ConflictError(`${collection} record ${record.id} already exists`)
     this.database
-      .prepare('INSERT INTO records (collection, record_id, payload_json, updated_at) VALUES (?, ?, ?, ?)')
-      .run(collection, record.id, JSON.stringify(record), now())
+      .prepare(
+        'INSERT INTO records (collection, record_id, payload_json, updated_at, schema_version) VALUES (?, ?, ?, ?, ?)',
+      )
+      .run(collection, record.id, JSON.stringify(record), now(), recordSchemaVersion(collection))
     return record
   }
 
   updateRecord(collection, id, record) {
-    validateRecord(collection, record)
+    if (!record || typeof record !== 'object' || Array.isArray(record)) validateRecord(collection, record)
     if (record.id !== id) throw new Error('Record id in URL must match record id in body')
-    if (!this.getRecord(collection, id)) throw new Error(`${collection} record ${id} does not exist`)
+    const existing = this.getRecord(collection, id)
+    if (!existing) throw new NotFoundError(`${collection} record ${id} does not exist`)
+    let nextRecord = record
+    if (collection === 'planningCycles') {
+      if (
+        record.cycleKey !== existing.cycleKey ||
+        record.startOn !== existing.startOn ||
+        record.endOn !== existing.endOn
+      ) {
+        throw new ValidationError('Planning cycle identity cannot change after creation')
+      }
+      nextRecord = { ...record, createdAt: existing.createdAt, updatedAt: now() }
+    }
+    validateRecord(collection, nextRecord)
     this.database
-      .prepare('UPDATE records SET payload_json = ?, updated_at = ? WHERE collection = ? AND record_id = ?')
-      .run(JSON.stringify(record), now(), collection, id)
-    return record
+      .prepare(
+        'UPDATE records SET payload_json = ?, updated_at = ?, schema_version = ? WHERE collection = ? AND record_id = ?',
+      )
+      .run(JSON.stringify(nextRecord), now(), recordSchemaVersion(collection), collection, id)
+    return nextRecord
   }
 
   deleteRecord(collection, id) {
@@ -156,9 +186,11 @@ export class MarginStorage {
   getDataset() {
     const metaRow = this.database.prepare('SELECT value_json FROM dataset_meta WHERE key = ?').get('dataset')
     const meta = metaRow ? parseJson(metaRow.value_json, 'dataset metadata') : createEmptyDataset()
+    const storedSchemaVersion = Number.isSafeInteger(meta.schemaVersion) ? meta.schemaVersion : CURRENT_SCHEMA_VERSION
     const dataset = {
       ...createEmptyDataset(),
       ...meta,
+      schemaVersion: Math.max(storedSchemaVersion, CURRENT_SCHEMA_VERSION),
       exportedAt: now(),
     }
     for (const collection of collectionNames()) dataset[collection] = this.getCollection(collection)
@@ -218,6 +250,60 @@ export class MarginStorage {
     return calculateLedgerSummary({
       entries: this.getCollection('entries'),
       commitments: this.getCollection('commitments'),
+    })
+  }
+
+  getPlanningCycles() {
+    return this.getCollection('planningCycles')
+  }
+
+  getPlanningCycleSummary(cycleKey, { evaluationOn = localDateToday() } = {}) {
+    let bounds
+    try {
+      bounds = cycleBounds(cycleKey)
+    } catch (error) {
+      throw new ValidationError('Invalid planning cycle', [error.message])
+    }
+
+    const cycle = this.getRecord('planningCycles', cycleKey)
+    const calculationCycle = cycle ?? { id: cycleKey, cycleKey, ...bounds }
+    return {
+      cycle,
+      summary: calculatePlanningCycleSummary({
+        cycle: calculationCycle,
+        entries: this.getCollection('entries'),
+        commitments: this.getCollection('commitments'),
+        evaluationOn,
+      }),
+    }
+  }
+
+  createPlanningCycle(input) {
+    const planningInput = validatePlanningCycleInput(input)
+    const timestamp = now()
+    const cycle = {
+      id: planningInput.cycleKey,
+      cycleKey: planningInput.cycleKey,
+      ...cycleBounds(planningInput.cycleKey),
+      ...planningInput,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+
+    return this.transaction(() => {
+      this.createRecord('planningCycles', cycle)
+      return this.getPlanningCycleSummary(cycle.cycleKey)
+    })
+  }
+
+  updatePlanningCycle(cycleKey, input) {
+    const existing = this.getRecord('planningCycles', cycleKey)
+    if (!existing) throw new NotFoundError(`planningCycles record ${cycleKey} does not exist`)
+    const patch = validatePlanningCyclePatch(input)
+    const cycle = { ...existing, ...patch, updatedAt: now() }
+    return this.transaction(() => {
+      this.updateRecord('planningCycles', cycleKey, cycle)
+      return this.getPlanningCycleSummary(cycleKey)
     })
   }
 
@@ -303,11 +389,11 @@ export class MarginStorage {
         .run('dataset', JSON.stringify(metadata))
 
       const insert = this.database.prepare(
-        'INSERT INTO records (collection, record_id, payload_json, updated_at) VALUES (?, ?, ?, ?)',
+        'INSERT INTO records (collection, record_id, payload_json, updated_at, schema_version) VALUES (?, ?, ?, ?, ?)',
       )
       for (const collection of collectionNames()) {
         for (const record of dataset[collection]) {
-          insert.run(collection, record.id, JSON.stringify(record), now())
+          insert.run(collection, record.id, JSON.stringify(record), now(), recordSchemaVersion(collection))
         }
       }
       return this.getDataset()

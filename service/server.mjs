@@ -3,7 +3,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { openStorage } from './storage.mjs'
 import { BackupError } from './backup.mjs'
-import { ConflictError, ValidationError, createSyntheticDataset, collectionNames } from './validation.mjs'
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+  createSyntheticDataset,
+  collectionNames,
+} from './validation.mjs'
 
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 4318
@@ -60,6 +66,7 @@ function errorResponse(error) {
   if (error instanceof ValidationError)
     return { statusCode: 400, body: { error: error.code, message: error.message, details: error.details } }
   if (error instanceof ConflictError) return { statusCode: 409, body: { error: error.code, message: error.message } }
+  if (error instanceof NotFoundError) return { statusCode: 404, body: { error: error.code, message: error.message } }
   if (error instanceof BackupError)
     return { statusCode: error.statusCode, body: { error: error.code, message: error.message, details: error.details } }
   if (error.statusCode) return { statusCode: error.statusCode, body: { error: 'FORBIDDEN', message: error.message } }
@@ -141,6 +148,30 @@ async function handleRequest(request, response, storage) {
   if (method === 'POST' && route[0] === 'entries' && route.length === 1) {
     sendJson(response, 201, storage.createTransaction(await readBody(request)))
     return
+  }
+
+  if (route[0] === 'planning-cycles') {
+    const cycleKey = route[1]
+    if (method === 'GET' && !cycleKey) {
+      sendJson(response, 200, { cycles: storage.getPlanningCycles() })
+      return
+    }
+    if (method === 'GET' && cycleKey && route.length === 2) {
+      sendJson(response, 200, storage.getPlanningCycleSummary(cycleKey))
+      return
+    }
+    if (method === 'POST' && !cycleKey && route.length === 1) {
+      sendJson(response, 201, storage.createPlanningCycle(await readBody(request)))
+      return
+    }
+    if (method === 'PUT' && cycleKey && route.length === 2) {
+      sendJson(response, 200, storage.updatePlanningCycle(cycleKey, await readBody(request)))
+      return
+    }
+    if (method === 'DELETE' && cycleKey && route.length === 2) {
+      sendJson(response, 200, { deleted: storage.deleteRecord('planningCycles', cycleKey) })
+      return
+    }
   }
 
   if (route[0] === 'collections' && collectionNames().includes(route[1])) {

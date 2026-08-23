@@ -66,6 +66,54 @@ test('creates salary and expense records and exposes the updated summary', async
   }
 })
 
+test('creates and updates a planning cycle through the service boundary', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-planning-test-'))
+  const context = await startServer(directory)
+  try {
+    await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01', source: 'Salary' }),
+    })
+    const created = await fetch(`${context.url}/api/planning-cycles`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ cycleKey: '2026-08', expectedSalaryMinor: 10000000, expectedSalaryOn: '2026-08-01' }),
+    })
+    const createdBody = await created.json()
+    assert.equal(created.status, 201)
+    assert.equal(createdBody.cycle.id, '2026-08')
+    assert.equal(createdBody.summary.actualSalaryMinor, 10000000)
+
+    const listed = await fetch(`${context.url}/api/planning-cycles`).then((response) => response.json())
+    assert.deepEqual(
+      listed.cycles.map((cycle) => cycle.cycleKey),
+      ['2026-08'],
+    )
+
+    const updated = await fetch(`${context.url}/api/planning-cycles/2026-08`, {
+      method: 'PUT',
+      headers: clientHeaders(),
+      body: JSON.stringify({ expectedSalaryMinor: 12000000 }),
+    })
+    const updatedBody = await updated.json()
+    assert.equal(updated.status, 200)
+    assert.equal(updatedBody.cycle.expectedSalaryMinor, 12000000)
+    assert.equal(updatedBody.summary.salaryVarianceMinor, -2000000)
+
+    const invalid = await fetch(`${context.url}/api/planning-cycles`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ cycleKey: '2026-08', expectedSalaryMinor: 0 }),
+    })
+    assert.equal(invalid.status, 400)
+    assert.equal((await invalid.json()).error, 'VALIDATION_ERROR')
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('rejects invalid expense commands before writing records', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-invalid-entry-test-'))
   const context = await startServer(directory)

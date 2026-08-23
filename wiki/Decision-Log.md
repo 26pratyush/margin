@@ -40,3 +40,7 @@ Margin compares the real account balance to calculated actual cash, not disposab
 Margin's first planning loop uses local calendar-month cycles. Opening actual balance is derived from active ledger movements before the cycle; actual salary is counted only when an income entry occurs; expected salary is informational until then; and rollover uses actual closing cash rather than disposable balance. Remaining commitments are reserved after actual cash is calculated, so planned money is not mistaken for money already spent.
 
 The normative rules and synthetic examples are recorded in [ADR-003 — Monthly planning and rollover rules](../docs/decisions/ADR-003-monthly-planning-and-rollover.md).
+
+## D-008 — Planning cycles persist inputs and derive outcomes
+
+Planning cycles are stored locally as deterministic calendar-month records containing expected salary inputs and timestamps. The SQLite record boundary is versioned without creating a parallel planning table, and JSON backup/restore preserves the new collection while migrating older backups with no planning state to an empty collection. Opening actual cash, actual salary, rollover, closing actual, commitment reservations, disposable balance, and salary variance remain derived from the existing ledger and commitments.

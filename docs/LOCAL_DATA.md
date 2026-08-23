@@ -28,11 +28,15 @@ The current envelope contains:
 
 - `format` and `formatVersion`.
 - `schemaVersion`, app version, export timestamp, and currency.
-- Complete entries, categories, commitments, and balance snapshots under `data`.
+- Complete entries, categories, commitments, balance snapshots, and planning cycles under `data`.
 - An `extensions` object for forward-compatible metadata.
 - A SHA-256 integrity digest over the canonical envelope.
 
 The service still accepts the original flat v1 backup shape and migrates it in memory. New exports use v2. An app rejects unsupported future versions rather than silently dropping fields.
+
+Dataset schema version 2 adds the `planningCycles` collection while keeping the backup envelope at format version 2. Flat v1 backups and v2 backups created before planning cycles are normalized with an empty planning-cycle collection, so existing records remain readable. New planning-cycle records are sorted and included in the integrity digest like every other collection.
+
+The SQLite migration adds a per-record schema marker to the existing generic `records` table. Existing records retain version 1, while planning-cycle records use version 2; no second planning-specific database table is introduced.
 
 Restore validates the full file, verifies its integrity digest, checks cross-record references, shows a preview in the browser, creates a local pre-restore recovery snapshot, and replaces the dataset in one SQLite transaction. Invalid files cannot change the current dataset.
 

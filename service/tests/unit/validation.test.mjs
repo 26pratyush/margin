@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { ValidationError, validateRecord, validateTransactionInput } from '../../validation.mjs'
+import {
+  ValidationError,
+  validatePlanningCycleInput,
+  validatePlanningCyclePatch,
+  validateRecord,
+  validateTransactionInput,
+} from '../../validation.mjs'
 import { syntheticDataset, syntheticEntry } from '../fixtures/synthetic.mjs'
 
 test('accepts valid synthetic records and preserves extension fields', () => {
@@ -93,5 +99,74 @@ test('rejects invalid first-slice transaction commands', () => {
       validateTransactionInput({ type: 'income', amountMinor: 100, occurredOn: '2026-08-01', categoryName: 'Salary' }),
     (error) =>
       error instanceof ValidationError && error.details.includes('categoryName is only supported for expenses'),
+  )
+})
+
+test('validates planning cycle identity, salary inputs, and writable fields', () => {
+  assert.deepEqual(
+    validatePlanningCycleInput({ cycleKey: '2026-08', expectedSalaryMinor: 10000000, expectedSalaryOn: '2026-08-01' }),
+    { cycleKey: '2026-08', expectedSalaryMinor: 10000000, expectedSalaryOn: '2026-08-01' },
+  )
+  assert.deepEqual(validatePlanningCyclePatch({ expectedSalaryMinor: 12000000 }), {
+    expectedSalaryMinor: 12000000,
+  })
+  assert.deepEqual(validatePlanningCyclePatch({ expectedSalaryOn: '2026-08-15' }), {
+    expectedSalaryOn: '2026-08-15',
+  })
+})
+
+test('rejects invalid planning cycle dates, amounts, references, and transitions', () => {
+  assert.throws(
+    () => validatePlanningCycleInput({ cycleKey: '2026-02', expectedSalaryMinor: 0 }),
+    (error) =>
+      error instanceof ValidationError && error.details.some((detail) => detail.includes('expectedSalaryMinor')),
+  )
+  assert.throws(
+    () => validatePlanningCycleInput({ cycleKey: '2026-08', expectedSalaryMinor: 100, expectedSalaryOn: '2026-09-01' }),
+    (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('within the cycle')),
+  )
+  assert.throws(
+    () => validatePlanningCycleInput({ cycleKey: '2026-08', startOn: '2026-08-01' }),
+    (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('not writable')),
+  )
+  assert.throws(
+    () => validatePlanningCyclePatch({ cycleKey: '2026-09' }),
+    (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('not writable')),
+  )
+  assert.throws(
+    () =>
+      validateRecord('planningCycles', {
+        id: 'wrong-id',
+        cycleKey: '2026-08',
+        startOn: '2026-08-01',
+        endOn: '2026-09-01',
+        createdAt: '2026-08-01T00:00:00.000Z',
+        updatedAt: '2026-08-01T00:00:00.000Z',
+      }),
+    (error) =>
+      error instanceof ValidationError && error.details.some((detail) => detail.includes('must match cycleKey')),
+  )
+  assert.doesNotThrow(() =>
+    validateRecord('planningCycles', {
+      id: '2026-08',
+      cycleKey: '2026-08',
+      startOn: '2026-08-01',
+      endOn: '2026-09-01',
+      createdAt: '2026-08-01T00:00:00Z',
+      updatedAt: '2026-08-01T00:00:00Z',
+    }),
+  )
+  assert.throws(
+    () =>
+      validateRecord('planningCycles', {
+        id: '2026-08',
+        cycleKey: '2026-08',
+        startOn: '2026-08-01',
+        endOn: '2026-09-01',
+        createdAt: '2026-02-30T00:00:00Z',
+        updatedAt: '2026-08-01T00:00:00Z',
+      }),
+    (error) =>
+      error instanceof ValidationError && error.details.some((detail) => detail.includes('calendar timestamp')),
   )
 })
