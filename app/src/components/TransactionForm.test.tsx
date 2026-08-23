@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { TransactionForm } from './TransactionForm'
+import { DEFAULT_CATEGORY_OPTIONS, TransactionForm } from './TransactionForm'
 
 describe('TransactionForm', () => {
   it('opens with expense selected and requires amount, name, and category', async () => {
@@ -19,6 +19,32 @@ describe('TransactionForm', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  it('offers common categories before any user category has been saved', () => {
+    render(<TransactionForm defaultType="expense" onSubmit={vi.fn().mockResolvedValue(undefined)} onClose={vi.fn()} />)
+
+    for (const category of DEFAULT_CATEGORY_OPTIONS) {
+      expect(screen.getByRole('option', { name: category.name })).toBeInTheDocument()
+    }
+    expect(screen.getByRole('option', { name: 'Create new category…' })).toBeInTheDocument()
+  })
+
+  it('does not duplicate a predefined option when it already exists in the ledger', () => {
+    render(
+      <TransactionForm
+        defaultType="expense"
+        categories={[
+          { id: 'saved-food', name: ' food ' },
+          { id: 'living', name: 'Living' },
+        ]}
+        onSubmit={vi.fn().mockResolvedValue(undefined)}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByRole('option', { name: /food/i })).toHaveLength(1)
+    expect(screen.getByRole('option', { name: 'Living' })).toBeInTheDocument()
+  })
+
   it('submits an expense with its name, selected category, date, and note', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
@@ -33,7 +59,7 @@ describe('TransactionForm', () => {
 
     await user.type(screen.getByLabelText('Amount'), '1,250.50')
     await user.type(screen.getByLabelText('Expense name'), 'Lunch')
-    await user.selectOptions(screen.getByLabelText('Category'), 'food')
+    await user.selectOptions(screen.getByLabelText('Category'), 'Food')
     await user.type(screen.getByLabelText('Note'), 'Team lunch')
     await user.click(screen.getByRole('button', { name: 'Save expense' }))
 

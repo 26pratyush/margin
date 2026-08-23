@@ -19,6 +19,31 @@ type FieldErrors = Partial<Record<'amount' | 'occurredOn' | 'name' | 'categoryNa
 
 const CREATE_CATEGORY_VALUE = '__create_category__'
 
+export const DEFAULT_CATEGORY_OPTIONS: TransactionCategory[] = [
+  { id: 'default-food', name: 'Food' },
+  { id: 'default-commute', name: 'Commute' },
+  { id: 'default-housing', name: 'Housing' },
+  { id: 'default-bills', name: 'Bills & utilities' },
+  { id: 'default-shopping', name: 'Shopping' },
+  { id: 'default-health', name: 'Health' },
+  { id: 'default-entertainment', name: 'Entertainment' },
+  { id: 'default-education', name: 'Education' },
+  { id: 'default-travel', name: 'Travel' },
+  { id: 'default-personal-care', name: 'Personal care' },
+  { id: 'default-subscriptions', name: 'Subscriptions' },
+  { id: 'default-other', name: 'Other' },
+]
+
+function categoryOptions(categories: TransactionCategory[]) {
+  const seenNames = new Set<string>()
+  return [...DEFAULT_CATEGORY_OPTIONS, ...categories].filter((category) => {
+    const normalizedName = category.name.trim().toLocaleLowerCase()
+    if (seenNames.has(normalizedName)) return false
+    seenNames.add(normalizedName)
+    return true
+  })
+}
+
 export function TransactionForm({
   defaultType,
   categories = [],
@@ -40,6 +65,7 @@ export function TransactionForm({
   const [note, setNote] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const availableCategories = categoryOptions(categories)
 
   function changeType(nextType: TransactionKind) {
     setType(nextType)
@@ -63,7 +89,7 @@ export function TransactionForm({
     const categoryName =
       categorySelection === CREATE_CATEGORY_VALUE
         ? newCategoryName.trim()
-        : (categories.find((category) => category.id === categorySelection)?.name.trim() ?? '')
+        : (availableCategories.find((category) => category.id === categorySelection)?.name.trim() ?? '')
     if (amountMinor === null) nextErrors.amount = 'Enter an amount greater than ₹0, using up to 2 decimal places.'
     if (!isValidCivilDate(occurredOn)) nextErrors.occurredOn = 'Enter a real calendar date.'
     if (type === 'expense' && expenseName.trim() === '') nextErrors.name = 'Add a name for this expense.'
@@ -186,7 +212,7 @@ export function TransactionForm({
                 aria-describedby={errors.categoryName ? 'category-error' : undefined}
               >
                 <option value="">Choose a category</option>
-                {categories.map((category) => (
+                {availableCategories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
