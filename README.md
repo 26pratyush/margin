@@ -8,7 +8,7 @@ Margin is a local-first personal finance tracker for understanding where money g
 
 Margin is in the foundation stage. The local application now runs a browser UI with a loopback-only Node service and file-backed SQLite persistence.
 
-Click here to access the Margin website
+[Click here to access the website](https://26pratyush.github.io/margin/)
 
 ## Product direction
 
