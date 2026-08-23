@@ -67,6 +67,7 @@ test('validates and normalizes first-slice salary and expense commands', () => {
       type: 'expense',
       amountMinor: 125000,
       occurredOn: '2026-08-21',
+      name: '  Lunch  ',
       categoryName: '  Food  ',
       note: 'Lunch',
     }),
@@ -74,6 +75,7 @@ test('validates and normalizes first-slice salary and expense commands', () => {
       type: 'expense',
       amountMinor: 125000,
       occurredOn: '2026-08-21',
+      name: 'Lunch',
       categoryName: 'Food',
       note: 'Lunch',
       source: undefined,
@@ -83,6 +85,7 @@ test('validates and normalizes first-slice salary and expense commands', () => {
     type: 'income',
     amountMinor: 10000000,
     occurredOn: '2026-08-01',
+    name: undefined,
     categoryName: undefined,
     note: undefined,
     source: undefined,
@@ -99,6 +102,10 @@ test('rejects invalid first-slice transaction commands', () => {
       validateTransactionInput({ type: 'income', amountMinor: 100, occurredOn: '2026-08-01', categoryName: 'Salary' }),
     (error) =>
       error instanceof ValidationError && error.details.includes('categoryName is only supported for expenses'),
+  )
+  assert.throws(
+    () => validateTransactionInput({ type: 'income', amountMinor: 100, occurredOn: '2026-08-01', name: 'Salary' }),
+    (error) => error instanceof ValidationError && error.details.includes('name is only supported for expenses'),
   )
 })
 

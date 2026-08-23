@@ -7,44 +7,93 @@ export type TransactionDraft = {
   type: TransactionKind
   amountMinor: number
   occurredOn: string
+  name?: string
   categoryName?: string
   source?: string
   note?: string
 }
 
-type FieldErrors = Partial<Record<'amount' | 'occurredOn' | 'categoryName' | 'form', string>>
+export type TransactionCategory = { id: string; name: string }
+
+type FieldErrors = Partial<Record<'amount' | 'occurredOn' | 'name' | 'categoryName' | 'form', string>>
+
+const CREATE_CATEGORY_VALUE = '__create_category__'
+
+export const DEFAULT_CATEGORY_OPTIONS: TransactionCategory[] = [
+  { id: 'default-food', name: 'Food' },
+  { id: 'default-commute', name: 'Commute' },
+  { id: 'default-housing', name: 'Housing' },
+  { id: 'default-bills', name: 'Bills & utilities' },
+  { id: 'default-shopping', name: 'Shopping' },
+  { id: 'default-health', name: 'Health' },
+  { id: 'default-entertainment', name: 'Entertainment' },
+  { id: 'default-education', name: 'Education' },
+  { id: 'default-travel', name: 'Travel' },
+  { id: 'default-personal-care', name: 'Personal care' },
+  { id: 'default-subscriptions', name: 'Subscriptions' },
+  { id: 'default-other', name: 'Other' },
+]
+
+function categoryOptions(categories: TransactionCategory[]) {
+  const seenNames = new Set<string>()
+  return [...DEFAULT_CATEGORY_OPTIONS, ...categories].filter((category) => {
+    const normalizedName = category.name.trim().toLocaleLowerCase()
+    if (seenNames.has(normalizedName)) return false
+    seenNames.add(normalizedName)
+    return true
+  })
+}
 
 export function TransactionForm({
   defaultType,
+  categories = [],
   onSubmit,
   onClose,
 }: {
   defaultType: TransactionKind
+  categories?: TransactionCategory[]
   onSubmit: (draft: TransactionDraft) => Promise<void>
   onClose: () => void
 }) {
   const [type, setType] = useState<TransactionKind>(defaultType)
   const [amount, setAmount] = useState('')
   const [occurredOn, setOccurredOn] = useState(todayCivilDate())
-  const [categoryName, setCategoryName] = useState('')
+  const [expenseName, setExpenseName] = useState('')
+  const [categorySelection, setCategorySelection] = useState('')
+  const [newCategoryName, setNewCategoryName] = useState('')
   const [source, setSource] = useState(defaultType === 'income' ? 'Salary' : '')
   const [note, setNote] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
+  const availableCategories = categoryOptions(categories)
 
   function changeType(nextType: TransactionKind) {
     setType(nextType)
+    setExpenseName('')
+    setCategorySelection('')
+    setNewCategoryName('')
     setSource(nextType === 'income' ? 'Salary' : '')
     setErrors({})
+  }
+
+  function changeCategory(value: string) {
+    setCategorySelection(value)
+    if (value !== CREATE_CATEGORY_VALUE) setNewCategoryName('')
+    setErrors((current) => ({ ...current, categoryName: undefined }))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const nextErrors: FieldErrors = {}
     const amountMinor = parseAmountToMinor(amount)
+    const categoryName =
+      categorySelection === CREATE_CATEGORY_VALUE
+        ? newCategoryName.trim()
+        : (availableCategories.find((category) => category.id === categorySelection)?.name.trim() ?? '')
     if (amountMinor === null) nextErrors.amount = 'Enter an amount greater than ₹0, using up to 2 decimal places.'
     if (!isValidCivilDate(occurredOn)) nextErrors.occurredOn = 'Enter a real calendar date.'
-    if (type === 'expense' && categoryName.trim() === '') nextErrors.categoryName = 'Add a category for this expense.'
+    if (type === 'expense' && expenseName.trim() === '') nextErrors.name = 'Add a name for this expense.'
+    if (type === 'expense' && categoryName === '') nextErrors.categoryName = 'Choose or create a category.'
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
       return
@@ -57,12 +106,15 @@ export function TransactionForm({
         type,
         amountMinor: amountMinor as number,
         occurredOn,
+        ...(type === 'expense' ? { name: expenseName.trim() } : {}),
         ...(type === 'expense' ? { categoryName: categoryName.trim() } : {}),
         ...(source.trim() ? { source: source.trim() } : {}),
         ...(note.trim() ? { note: note.trim() } : {}),
       })
       setAmount('')
-      setCategoryName('')
+      setExpenseName('')
+      setCategorySelection('')
+      setNewCategoryName('')
       setNote('')
     } catch (reason) {
       setErrors({ form: reason instanceof Error ? reason.message : 'Unable to save this transaction.' })
@@ -91,19 +143,19 @@ export function TransactionForm({
       <div className="transaction-kind" role="group" aria-label="Transaction type">
         <button
           type="button"
-          className={`kind-button ${type === 'income' ? 'kind-button-active' : ''}`}
-          aria-pressed={type === 'income'}
-          onClick={() => changeType('income')}
-        >
-          Salary
-        </button>
-        <button
-          type="button"
           className={`kind-button ${type === 'expense' ? 'kind-button-active' : ''}`}
           aria-pressed={type === 'expense'}
           onClick={() => changeType('expense')}
         >
           Expense
+        </button>
+        <button
+          type="button"
+          className={`kind-button ${type === 'income' ? 'kind-button-active' : ''}`}
+          aria-pressed={type === 'income'}
+          onClick={() => changeType('income')}
+        >
+          Salary
         </button>
       </div>
       <form className="transaction-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
@@ -130,6 +182,61 @@ export function TransactionForm({
               </small>
             )}
           </label>
+          {type === 'expense' && (
+            <label className="field">
+              <span>Expense name</span>
+              <input
+                type="text"
+                aria-label="Expense name"
+                value={expenseName}
+                onChange={(event) => setExpenseName(event.target.value)}
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? 'name-error' : undefined}
+                placeholder="What was this for?"
+              />
+              {errors.name && (
+                <small id="name-error" className="field-error">
+                  {errors.name}
+                </small>
+              )}
+            </label>
+          )}
+          {type === 'expense' && (
+            <label className="field">
+              <span>Category</span>
+              <select
+                aria-label="Category"
+                value={categorySelection}
+                onChange={(event) => changeCategory(event.target.value)}
+                aria-invalid={Boolean(errors.categoryName)}
+                aria-describedby={errors.categoryName ? 'category-error' : undefined}
+              >
+                <option value="">Choose a category</option>
+                {availableCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+                <option value={CREATE_CATEGORY_VALUE}>Create new category…</option>
+              </select>
+              {categorySelection === CREATE_CATEGORY_VALUE && (
+                <input
+                  type="text"
+                  aria-label="New category"
+                  value={newCategoryName}
+                  onChange={(event) => setNewCategoryName(event.target.value)}
+                  aria-invalid={Boolean(errors.categoryName)}
+                  aria-describedby={errors.categoryName ? 'category-error' : undefined}
+                  placeholder="Name your category"
+                />
+              )}
+              {errors.categoryName && (
+                <small id="category-error" className="field-error">
+                  {errors.categoryName}
+                </small>
+              )}
+            </label>
+          )}
           <label className="field">
             <span>Date</span>
             <input
@@ -146,25 +253,7 @@ export function TransactionForm({
               </small>
             )}
           </label>
-          {type === 'expense' ? (
-            <label className="field">
-              <span>Category</span>
-              <input
-                type="text"
-                aria-label="Category"
-                value={categoryName}
-                onChange={(event) => setCategoryName(event.target.value)}
-                aria-invalid={Boolean(errors.categoryName)}
-                aria-describedby={errors.categoryName ? 'category-error' : undefined}
-                placeholder="Food, travel, home…"
-              />
-              {errors.categoryName && (
-                <small id="category-error" className="field-error">
-                  {errors.categoryName}
-                </small>
-              )}
-            </label>
-          ) : (
+          {type === 'income' && (
             <label className="field">
               <span>
                 Source <em>Optional</em>

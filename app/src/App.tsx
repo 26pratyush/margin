@@ -1,4 +1,5 @@
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react'
+import { SalaryRepeatButton, SalaryRepeatDraft } from './components/SalaryRepeatButton'
 import { TransactionDraft, TransactionForm, TransactionKind } from './components/TransactionForm'
 
 type Entry = {
@@ -7,6 +8,7 @@ type Entry = {
   amountMinor: number
   occurredOn: string
   status: string
+  name?: string
   note?: string
   source?: string
   categoryId?: string
@@ -127,10 +129,18 @@ function amountLabel(entry: Entry, currency: string) {
 }
 
 function entryLabel(entry: Entry, categories: Dataset['categories'] = []) {
+  if (entry.name) return entry.name
   if (entry.note) return entry.note
   if (entry.source) return entry.source
   if (entry.categoryId) return categories.find((category) => category.id === entry.categoryId)?.name ?? 'Expense'
   return entry.type.charAt(0).toUpperCase() + entry.type.slice(1)
+}
+
+export function latestSalary(entries: Entry[]) {
+  return [...entries]
+    .filter((entry) => entry.status === 'active' && entry.type === 'income')
+    .sort((left, right) => left.occurredOn.localeCompare(right.occurredOn) || left.id.localeCompare(right.id))
+    .at(-1)
 }
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -333,6 +343,33 @@ function EmptyState({
   )
 }
 
+export function TransactionActions({
+  latestSalaryMinor,
+  currency,
+  onRepeatSalary,
+  onOpenForm,
+}: {
+  latestSalaryMinor: number | null
+  currency: string
+  onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
+  onOpenForm: (type?: TransactionKind) => void
+}) {
+  return (
+    <div className="heading-actions">
+      {latestSalaryMinor !== null && (
+        <SalaryRepeatButton
+          amountMinor={latestSalaryMinor}
+          amountLabel={money(latestSalaryMinor, currency)}
+          onRepeat={onRepeatSalary}
+        />
+      )}
+      <Button variant="primary" icon="plus" onClick={() => onOpenForm()}>
+        Add transaction
+      </Button>
+    </div>
+  )
+}
+
 function Metric({
   label,
   value,
@@ -407,6 +444,8 @@ function HomeView({
   health,
   onSeed,
   onNavigate,
+  latestSalaryMinor,
+  onRepeatSalary,
   onOpenForm,
 }: {
   dataset: Dataset | null
@@ -414,6 +453,8 @@ function HomeView({
   health: Health | null
   onSeed: () => void
   onNavigate: (route: Route) => void
+  latestSalaryMinor: number | null
+  onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
   onOpenForm: (type?: TransactionKind) => void
 }) {
   const entries = dataset?.entries ?? []
@@ -429,9 +470,12 @@ function HomeView({
         title="Good to see you."
         description="A clear view of what came in, what went out, and what is already spoken for."
         action={
-          <Button variant="primary" icon="plus" onClick={() => onOpenForm()}>
-            Add transaction
-          </Button>
+          <TransactionActions
+            latestSalaryMinor={latestSalaryMinor}
+            currency={currency}
+            onRepeatSalary={onRepeatSalary}
+            onOpenForm={onOpenForm}
+          />
         }
       />
       <div className="workspace-status">
@@ -574,12 +618,16 @@ function TransactionsView({
   dataset,
   onSeed,
   onNavigate,
+  latestSalaryMinor,
+  onRepeatSalary,
   onOpenForm,
   onRefresh,
 }: {
   dataset: Dataset | null
   onSeed: () => void
   onNavigate: (route: Route) => void
+  latestSalaryMinor: number | null
+  onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
   onOpenForm: (type?: TransactionKind) => void
   onRefresh: () => void
 }) {
@@ -592,9 +640,12 @@ function TransactionsView({
         title="Transactions"
         description="Every debit and credit in one calm, chronological view."
         action={
-          <Button variant="primary" icon="plus" onClick={() => onOpenForm()}>
-            Add transaction
-          </Button>
+          <TransactionActions
+            latestSalaryMinor={latestSalaryMinor}
+            currency={currency}
+            onRepeatSalary={onRepeatSalary}
+            onOpenForm={onOpenForm}
+          />
         }
       />
       {entries.length === 0 ? (
@@ -949,7 +1000,7 @@ function App() {
     window.location.hash = nextRoute === 'home' ? '' : nextRoute
   }
 
-  function openTransactionForm(type: TransactionKind = 'income') {
+  function openTransactionForm(type: TransactionKind = 'expense') {
     setTransactionForm({ type })
   }
 
@@ -961,6 +1012,16 @@ function App() {
       text: draft.type === 'income' ? 'Salary added to your local ledger.' : 'Expense added to your local ledger.',
     })
     await refresh()
+  }
+
+  async function repeatSalary(draft: SalaryRepeatDraft) {
+    try {
+      await request('/api/entries', { method: 'POST', body: JSON.stringify(draft) })
+      setNotice({ tone: 'success', text: 'Salary added for today.' })
+      await refresh()
+    } catch (reason) {
+      setNotice({ tone: 'error', text: reason instanceof Error ? reason.message : 'Unable to add salary.' })
+    }
   }
 
   async function seedSyntheticData() {
@@ -1032,6 +1093,7 @@ function App() {
   }
 
   const activeNavigation = navigation.find((item) => item.key === route) ?? navigation[0]
+  const latestSalaryMinor = latestSalary(dataset?.entries ?? [])?.amountMinor ?? null
 
   return (
     <div className="app-shell">
@@ -1104,6 +1166,7 @@ function App() {
             <TransactionForm
               key={transactionForm.type}
               defaultType={transactionForm.type}
+              categories={dataset?.categories}
               onSubmit={createTransaction}
               onClose={() => setTransactionForm(null)}
             />
@@ -1120,6 +1183,8 @@ function App() {
               health={health}
               onSeed={() => void seedSyntheticData()}
               onNavigate={navigate}
+              latestSalaryMinor={latestSalaryMinor}
+              onRepeatSalary={repeatSalary}
               onOpenForm={openTransactionForm}
             />
           ) : route === 'transactions' ? (
@@ -1127,6 +1192,8 @@ function App() {
               dataset={dataset}
               onSeed={() => void seedSyntheticData()}
               onNavigate={navigate}
+              latestSalaryMinor={latestSalaryMinor}
+              onRepeatSalary={repeatSalary}
               onOpenForm={openTransactionForm}
               onRefresh={() => void refresh()}
             />

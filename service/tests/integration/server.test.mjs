@@ -49,10 +49,17 @@ test('creates salary and expense records and exposes the updated summary', async
     const expense = await fetch(`${context.url}/api/entries`, {
       method: 'POST',
       headers: clientHeaders(),
-      body: JSON.stringify({ type: 'expense', amountMinor: 125000, occurredOn: '2026-08-02', categoryName: 'Food' }),
+      body: JSON.stringify({
+        type: 'expense',
+        amountMinor: 125000,
+        occurredOn: '2026-08-02',
+        name: 'Lunch',
+        categoryName: 'Food',
+      }),
     })
     const expenseBody = await expense.json()
     assert.equal(expense.status, 201)
+    assert.equal(expenseBody.entry.name, 'Lunch')
     assert.equal(expenseBody.entry.categoryId, expenseBody.category.id)
 
     const summary = await fetch(`${context.url}/api/summary`).then((response) => response.json())

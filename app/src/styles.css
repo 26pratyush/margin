@@ -314,6 +314,43 @@ a {
 .heading-action {
   padding-bottom: 4px;
 }
+.heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+}
+.salary-repeat-button {
+  display: inline-flex;
+  min-height: 40px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6px 12px;
+  border: 1px solid rgba(129, 201, 208, 0.32);
+  border-radius: 9px;
+  background: rgba(129, 201, 208, 0.08);
+  color: var(--color-teal);
+  text-align: left;
+}
+.salary-repeat-button:hover {
+  border-color: var(--color-teal);
+  background: rgba(129, 201, 208, 0.14);
+}
+.salary-repeat-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.salary-repeat-button span {
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+.salary-repeat-button small {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
 .workspace-status {
   display: flex;
   align-items: center;
@@ -872,7 +909,8 @@ a {
   grid-column: 1 / -1;
 }
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   border: 1px solid var(--color-border);
   border-radius: 9px;
@@ -885,9 +923,26 @@ a {
     border-color 0.18s ease,
     background 0.18s ease;
 }
-.field input {
+.field input,
+.field select {
   min-height: 42px;
   padding: 9px 11px;
+}
+.field select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 18px,
+    calc(100% - 11px) 18px;
+  background-repeat: no-repeat;
+  background-size: 5px 5px;
+  padding-right: 32px;
+}
+.field select option {
+  color: var(--color-text);
+  background: var(--color-surface-raised);
 }
 .field textarea {
   min-height: 68px;
@@ -895,11 +950,13 @@ a {
   resize: vertical;
 }
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   border-color: var(--color-teal-deep);
   background: rgba(17, 20, 19, 0.72);
 }
-.field input[aria-invalid='true'] {
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'] {
   border-color: var(--color-negative);
 }
 .field-input-wrap {
@@ -1155,7 +1212,12 @@ a {
   .heading-action {
     margin-top: 22px;
   }
-  .heading-action .button {
+  .heading-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .heading-actions .button,
+  .salary-repeat-button {
     width: 100%;
   }
   .workspace-status {
