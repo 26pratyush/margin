@@ -54,16 +54,19 @@ test('creates salary and expense records atomically and reuses expense categorie
       type: 'expense',
       amountMinor: 125000,
       occurredOn: '2026-08-02',
+      name: 'Lunch',
       categoryName: 'Food',
     })
     const secondExpense = first.createTransaction({
       type: 'expense',
       amountMinor: 50000,
       occurredOn: '2026-08-03',
+      name: 'Coffee',
       categoryName: ' food ',
     })
 
     assert.equal(salary.entry.type, 'income')
+    assert.equal(firstExpense.entry.name, 'Lunch')
     assert.equal(firstExpense.entry.categoryId, secondExpense.entry.categoryId)
     assert.equal(first.getDataset().entries.length, 3)
     assert.equal(first.getDataset().categories.length, 1)
@@ -91,7 +94,13 @@ test('persists a planning cycle and derives its summary from actual ledger facts
     occurredOn: '2026-08-01',
     source: 'Synthetic salary',
   })
-  first.createTransaction({ type: 'expense', amountMinor: 2000000, occurredOn: '2026-08-02', categoryName: 'Living' })
+  first.createTransaction({
+    type: 'expense',
+    amountMinor: 2000000,
+    occurredOn: '2026-08-02',
+    name: 'Groceries',
+    categoryName: 'Living',
+  })
   first.createRecord('commitments', {
     id: 'rent',
     kind: 'bill',
@@ -205,7 +214,11 @@ test('rejects an invalid restore before changing existing data', async () => {
 
 test('exports a versioned backup and creates a recovery snapshot before restore', async () => {
   await withStorage(async (storage) => {
-    storage.replaceDataset(createSyntheticDataset())
+    const dataset = createSyntheticDataset()
+    dataset.entries = dataset.entries.map((entry) =>
+      entry.type === 'expense' ? { ...entry, name: 'Legacy lunch' } : entry,
+    )
+    storage.replaceDataset(dataset)
     const backup = storage.exportBackup()
     assert.equal(backup.formatVersion, 2)
     assert.equal(backup.integrity.algorithm, 'sha256')
@@ -216,6 +229,7 @@ test('exports a versioned backup and creates a recovery snapshot before restore'
     assert.equal(result.summary.recoverySnapshotCreated, true)
     assert.equal(recoveryFiles.length, 1)
     assert.equal(storage.getDataset().entries.length, 2)
+    assert.equal(storage.getDataset().entries.find((entry) => entry.id === 'synthetic-expense')?.name, 'Legacy lunch')
   })
 })
 
@@ -268,7 +282,13 @@ test('reset clears Margin records without deleting the configured data directory
 test('existing reset removes first-slice salary, expense, and category records', async () => {
   await withStorage(async (storage) => {
     storage.createTransaction({ type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01' })
-    storage.createTransaction({ type: 'expense', amountMinor: 125000, occurredOn: '2026-08-02', categoryName: 'Food' })
+    storage.createTransaction({
+      type: 'expense',
+      amountMinor: 125000,
+      occurredOn: '2026-08-02',
+      name: 'Lunch',
+      categoryName: 'Food',
+    })
 
     const reset = storage.reset()
 

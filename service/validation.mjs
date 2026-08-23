@@ -150,10 +150,15 @@ export function validateTransactionInput(value) {
   if (!['income', 'expense'].includes(value.type)) details.push('type must be income or expense')
   assertInteger(value.amountMinor, 'amountMinor', details, { min: 1 })
   assertDate(value.occurredOn, 'occurredOn', details)
+  assertOptionalString(value.name, 'name', details)
   assertOptionalString(value.source, 'source', details)
   assertOptionalString(value.note, 'note', details)
 
-  if (value.type === 'expense') assertString(value.categoryName, 'categoryName', details)
+  if (value.type === 'expense') {
+    assertString(value.name, 'name', details)
+    assertString(value.categoryName, 'categoryName', details)
+  }
+  if (value.type === 'income' && value.name !== undefined) details.push('name is only supported for expenses')
   if (value.type === 'income' && value.categoryName !== undefined)
     details.push('categoryName is only supported for expenses')
 
@@ -163,6 +168,7 @@ export function validateTransactionInput(value) {
     type: value.type,
     amountMinor: value.amountMinor,
     occurredOn: value.occurredOn,
+    name: value.name?.trim(),
     categoryName: value.categoryName?.trim(),
     source: value.source?.trim(),
     note: value.note?.trim(),
@@ -185,6 +191,7 @@ export function validateRecord(collection, value, index = 0) {
     if (!ENTRY_TYPES.includes(value.type)) details.push(`${collection}[${index}].type is invalid`)
     assertInteger(value.amountMinor, `${collection}[${index}].amountMinor`, details, { min: 1 })
     assertDate(value.occurredOn, `${collection}[${index}].occurredOn`, details)
+    assertOptionalString(value.name, `${collection}[${index}].name`, details)
     if (!ENTRY_STATUSES.includes(value.status)) details.push(`${collection}[${index}].status is invalid`)
     if (value.type === 'adjustment' && !['credit', 'debit'].includes(value.direction)) {
       details.push(`${collection}[${index}].direction must be credit or debit for an adjustment`)

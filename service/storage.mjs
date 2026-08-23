@@ -331,6 +331,7 @@ export class MarginStorage {
         amountMinor: transaction.amountMinor,
         occurredOn: transaction.occurredOn,
         status: 'active',
+        ...(transaction.name ? { name: transaction.name } : {}),
         ...(categoryId ? { categoryId } : {}),
         ...(transaction.source ? { source: transaction.source } : {}),
         ...(transaction.note ? { note: transaction.note } : {}),
