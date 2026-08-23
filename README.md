@@ -8,6 +8,8 @@ Margin is a local-first personal finance tracker for understanding where money g
 
 Margin is in the foundation stage. The local application now runs a browser UI with a loopback-only Node service and file-backed SQLite persistence.
 
+Click here to access the Margin website
+
 ## Product direction
 
 Margin is designed for someone starting their first job and wanting a granular but calm way to manage money without mindless spending (aka Jordans and foreign booze).
