@@ -59,7 +59,9 @@ describe('PlanningWorkspace', () => {
 
     await user.click(screen.getByRole('button', { name: 'Open locker' }))
     const locker = screen.getByRole('region', { name: 'The monthly locker' })
-    expect(within(locker).getByText('₹1,00,000.00')).toBeInTheDocument()
+    expect(within(locker).getByText('Reserved this cycle')).toBeInTheDocument()
+    expect(within(locker).getByText('₹30,000.00')).toBeInTheDocument()
+    expect(within(locker).queryByText('₹1,00,000.00')).not.toBeInTheDocument()
     expect(within(locker).getByText('Reserved is not spent')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Reserve money for August 2026' }))
