@@ -149,12 +149,12 @@ function LockerGlyph({ open }: { open: boolean }) {
 }
 
 function LockerCard({
-  amountMinor,
+  reservedAmountMinor,
   currency,
   cycle,
   onReserve,
 }: {
-  amountMinor: number
+  reservedAmountMinor: number
   currency: string
   cycle: PlanningCycle
   onReserve: (draft: ReserveDraft) => Promise<void>
@@ -214,9 +214,9 @@ function LockerCard({
       <div className="locker-stage">
         <LockerGlyph open={open} />
         <div className="locker-amount" aria-live="polite">
-          <span>{open ? 'Held at cycle start' : 'Amount held'}</span>
-          <strong>{open ? signedMoney(amountMinor, currency) : '₹ ••••••'}</strong>
-          <small>{open ? 'Your rollover into this cycle' : 'Open the locker to take a look'}</small>
+          <span>{open ? 'Reserved this cycle' : 'Reserved amount'}</span>
+          <strong>{open ? money(reservedAmountMinor, currency) : '₹ ••••••'}</strong>
+          <small>{open ? 'Planned commitments, not spent' : 'Open the locker to take a look'}</small>
         </div>
       </div>
       <div className="locker-actions">
@@ -558,7 +558,12 @@ export function PlanningWorkspace({
         </div>
       </section>
       <div className="planning-grid">
-        <LockerCard amountMinor={summary.openingActualMinor} currency={currency} cycle={cycle} onReserve={onReserve} />
+        <LockerCard
+          reservedAmountMinor={summary.reservedCommitmentMinor}
+          currency={currency}
+          cycle={cycle}
+          onReserve={onReserve}
+        />
         <SalaryPlanCard planning={planning} currency={currency} onSave={onSaveSalary} />
       </div>
       <section className="panel planning-ledger-card" aria-labelledby="planning-ledger-title">
