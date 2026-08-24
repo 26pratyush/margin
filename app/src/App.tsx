@@ -1,6 +1,8 @@
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react'
+import { PlanningResponse, PlanningWorkspace, ReserveDraft } from './components/PlanningWorkspace'
 import { SalaryRepeatButton, SalaryRepeatDraft } from './components/SalaryRepeatButton'
 import { TransactionDraft, TransactionForm, TransactionKind } from './components/TransactionForm'
+import { todayCivilDate } from './domain/money'
 
 type Entry = {
   id: string
@@ -90,7 +92,7 @@ type Notice = {
 const navigation: Array<{ key: Route; label: string; description: string; icon: IconName }> = [
   { key: 'home', label: 'Overview', description: 'Your money at a glance', icon: 'home' },
   { key: 'transactions', label: 'Transactions', description: 'Income and spending', icon: 'transactions' },
-  { key: 'insights', label: 'Insights', description: 'Patterns over time', icon: 'insights' },
+  { key: 'insights', label: 'Planning', description: 'Plan the current salary cycle', icon: 'insights' },
   { key: 'commitments', label: 'Commitments', description: 'What is already spoken for', icon: 'commitments' },
   { key: 'settings', label: 'Settings', description: 'Local data and preferences', icon: 'settings' },
 ]
@@ -691,84 +693,6 @@ function TransactionsView({
   )
 }
 
-function InsightsView({
-  dataset,
-  onSeed,
-  onNavigate,
-}: {
-  dataset: Dataset | null
-  onSeed: () => void
-  onNavigate: (route: Route) => void
-}) {
-  const entries = dataset?.entries ?? []
-  const hasEnoughData = entries.length >= 2
-  const currency = dataset?.currency ?? 'INR'
-  const expenseTotal = entries
-    .filter((entry) => entry.status === 'active' && entry.type === 'expense')
-    .reduce((total, entry) => total + entry.amountMinor, 0)
-  return (
-    <>
-      <PageHeading
-        eyebrow="Workspace / Insights"
-        title="Insights"
-        description="Patterns should make decisions easier, not make the screen busier."
-      />
-      {!hasEnoughData ? (
-        <section className="panel">
-          <EmptyState
-            icon="insights"
-            eyebrow="A little data goes a long way"
-            title="Insights need a few entries."
-            description="Once you have more than one active transaction, this space will help you spot weekly rhythms, category concentration, and changes in your spending."
-            primaryLabel="Load synthetic workspace"
-            onPrimary={onSeed}
-            secondaryLabel="Review transactions"
-            onSecondary={() => onNavigate('transactions')}
-          />
-        </section>
-      ) : (
-        <div className="insight-grid">
-          <section className="panel insight-feature">
-            <div className="panel-heading">
-              <div>
-                <p className="card-label">This month</p>
-                <h2>Spend at a glance</h2>
-              </div>
-              <div className="panel-mark panel-mark-teal">
-                <Icon name="insights" size={18} />
-              </div>
-            </div>
-            <strong className="insight-value">{money(expenseTotal, currency)}</strong>
-            <p className="insight-copy">
-              A focused view of spending will appear here as categories and periods become meaningful.
-            </p>
-            <div className="insight-bars">
-              <span style={{ height: '42%' }} />
-              <span style={{ height: '64%' }} />
-              <span style={{ height: '51%' }} />
-              <span style={{ height: '78%' }} />
-              <span style={{ height: '58%' }} />
-              <span style={{ height: '88%' }} />
-              <span style={{ height: '69%' }} />
-            </div>
-          </section>
-          <section className="panel insight-note">
-            <div className="next-panel-icon teal-fill">
-              <Icon name="spark" size={20} />
-            </div>
-            <p className="eyebrow">Design principle</p>
-            <h2>Useful density, not dashboard clutter.</h2>
-            <p>
-              Charts will earn their place by answering a question about your money. They will not exist just to
-              decorate the home screen.
-            </p>
-          </section>
-        </div>
-      )}
-    </>
-  )
-}
-
 function CommitmentsView({
   dataset,
   onSeed,
@@ -960,6 +884,10 @@ function App() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [loading, setLoading] = useState(true)
+  const [planning, setPlanning] = useState<PlanningResponse | null>(null)
+  const [planningLoading, setPlanningLoading] = useState(false)
+  const [planningError, setPlanningError] = useState<string | null>(null)
+  const planningCycleKey = todayCivilDate().slice(0, 7)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [transactionForm, setTransactionForm] = useState<{ type: TransactionKind } | null>(null)
   const importInput = useRef<HTMLInputElement>(null)
@@ -995,6 +923,24 @@ function App() {
     void refresh()
   }, [])
 
+  async function loadPlanning() {
+    setPlanningLoading(true)
+    setPlanningError(null)
+    try {
+      const nextPlanning = await request<PlanningResponse>(`/api/planning-cycles/${planningCycleKey}`)
+      setPlanning(nextPlanning)
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Unable to open the planning workspace.'
+      setPlanningError(message)
+    } finally {
+      setPlanningLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (route === 'insights') void loadPlanning()
+  }, [route])
+
   function navigate(nextRoute: Route) {
     if (nextRoute !== 'home' && nextRoute !== 'transactions') setTransactionForm(null)
     window.location.hash = nextRoute === 'home' ? '' : nextRoute
@@ -1021,6 +967,49 @@ function App() {
       await refresh()
     } catch (reason) {
       setNotice({ tone: 'error', text: reason instanceof Error ? reason.message : 'Unable to add salary.' })
+    }
+  }
+
+  async function saveExpectedSalary(input: { expectedSalaryMinor: number; expectedSalaryOn?: string }) {
+    try {
+      const method = planning?.cycle ? 'PUT' : 'POST'
+      const path = planning?.cycle ? `/api/planning-cycles/${planningCycleKey}` : '/api/planning-cycles'
+      await request(path, {
+        method,
+        body: JSON.stringify({ cycleKey: planningCycleKey, ...input }),
+      })
+      setNotice({ tone: 'success', text: 'Expected salary saved for this planning cycle.' })
+      await loadPlanning()
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Unable to save expected salary.'
+      setPlanningError(message)
+      throw new Error(message, { cause: reason })
+    }
+  }
+
+  async function reserveForCycle(draft: ReserveDraft) {
+    try {
+      await request('/api/collections/commitments', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: globalThis.crypto.randomUUID(),
+          kind: 'saving',
+          name: draft.name,
+          plannedAmountMinor: draft.amountMinor,
+          dueOn: draft.dueOn,
+          status: 'planned',
+          linkedEntryIds: [],
+        }),
+      })
+      setNotice({
+        tone: 'success',
+        text: 'Planned reserve saved. Your actual balance is unchanged; disposable balance now reflects the plan.',
+      })
+      await Promise.all([refresh(), loadPlanning()])
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Unable to save planned reserve.'
+      setPlanningError(message)
+      throw new Error(message, { cause: reason })
     }
   }
 
@@ -1198,7 +1187,18 @@ function App() {
               onRefresh={() => void refresh()}
             />
           ) : route === 'insights' ? (
-            <InsightsView dataset={dataset} onSeed={() => void seedSyntheticData()} onNavigate={navigate} />
+            <PlanningWorkspace
+              planning={planning}
+              cycleKey={planningCycleKey}
+              currency={dataset?.currency ?? 'INR'}
+              actualBalanceMinor={summary?.actualBalanceMinor ?? 0}
+              hasLedgerData={Boolean(dataset && (dataset.entries.length > 0 || dataset.commitments.length > 0))}
+              loading={planningLoading}
+              error={planningError}
+              onSaveSalary={saveExpectedSalary}
+              onReserve={reserveForCycle}
+              onRetry={() => void loadPlanning()}
+            />
           ) : route === 'commitments' ? (
             <CommitmentsView
               dataset={dataset}

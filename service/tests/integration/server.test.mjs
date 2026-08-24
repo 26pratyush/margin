@@ -121,6 +121,46 @@ test('creates and updates a planning cycle through the service boundary', async 
   }
 })
 
+test('reserves money as a planned saving without changing the actual balance', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-reserve-test-'))
+  const context = await startServer(directory)
+  try {
+    await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01', source: 'Salary' }),
+    })
+
+    const reserved = await fetch(`${context.url}/api/collections/commitments`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        id: 'planned-emergency-fund',
+        kind: 'saving',
+        name: 'Emergency fund',
+        plannedAmountMinor: 3000000,
+        dueOn: '2026-08-01',
+        status: 'planned',
+        linkedEntryIds: [],
+      }),
+    })
+    assert.equal(reserved.status, 201)
+
+    const summary = await fetch(`${context.url}/api/summary`).then((response) => response.json())
+    assert.equal(summary.actualBalanceMinor, 10000000)
+    assert.equal(summary.reservedCommitmentMinor, 3000000)
+    assert.equal(summary.disposableBalanceMinor, 7000000)
+
+    const planning = await fetch(`${context.url}/api/planning-cycles/2026-08`).then((response) => response.json())
+    assert.equal(planning.summary.closingActualMinor, 10000000)
+    assert.equal(planning.summary.reservedCommitmentMinor, 3000000)
+    assert.equal(planning.summary.disposableBalanceMinor, 7000000)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('rejects invalid expense commands before writing records', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-invalid-entry-test-'))
   const context = await startServer(directory)
