@@ -153,6 +153,42 @@ test('persists a planning cycle and derives its summary from actual ledger facts
   }
 })
 
+test('applies reconciliation adjustments to planning without changing reservation semantics', async () => {
+  await withStorage(async (storage) => {
+    storage.createPlanningCycle({
+      cycleKey: '2026-08',
+      expectedSalaryMinor: 10000000,
+      expectedSalaryOn: '2026-08-01',
+    })
+    storage.createRecord('commitments', {
+      id: 'planned-saving',
+      kind: 'saving',
+      name: 'Synthetic reserve',
+      plannedAmountMinor: 300000,
+      dueOn: '2026-08-05',
+      status: 'planned',
+      linkedEntryIds: [],
+    })
+
+    const reconciliation = storage.reconcile({
+      asOf: '2026-08-02',
+      realBalanceMinor: 500000,
+      note: 'Synthetic reconciliation',
+    })
+    const planning = storage.getPlanningCycleSummary('2026-08', { evaluationOn: '2026-08-31' })
+
+    assert.equal(reconciliation.adjustment.direction, 'credit')
+    assert.equal(planning.summary.periodCreditsMinor, 500000)
+    assert.equal(planning.summary.closingActualMinor, 500000)
+    assert.equal(planning.summary.reservedCommitmentMinor, 300000)
+    assert.equal(planning.summary.disposableBalanceMinor, 200000)
+
+    const reset = storage.reset()
+    assert.equal(reset.planningCycles.length, 0)
+    assert.equal(reset.balanceSnapshots.length, 0)
+  })
+})
+
 test('migrates an existing v1 SQLite database without losing records', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-migration-'))
   const databasePath = path.join(directory, 'margin.sqlite')
@@ -229,6 +265,10 @@ test('exports a versioned backup and creates a recovery snapshot before restore'
     assert.equal(result.summary.recoverySnapshotCreated, true)
     assert.equal(recoveryFiles.length, 1)
     assert.equal(storage.getDataset().entries.length, 2)
+    assert.equal(storage.getDataset().planningCycles[0].expectedSalaryMinor, 10000000)
+    const planning = storage.getPlanningCycleSummary('2026-08', { evaluationOn: '2026-08-31' })
+    assert.equal(planning.summary.closingActualMinor, 9875000)
+    assert.equal(planning.summary.reservedCommitmentMinor, 3000000)
     assert.equal(storage.getDataset().entries.find((entry) => entry.id === 'synthetic-expense')?.name, 'Legacy lunch')
   })
 })

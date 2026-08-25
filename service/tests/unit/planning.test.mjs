@@ -148,3 +148,35 @@ test('supports zero balances and validates calendar-cycle boundaries', () => {
   assert.deepEqual(cycleBounds('2026-12'), { startOn: '2026-12-01', endOn: '2027-01-01' })
   assert.throws(() => cycleBounds('2026-13'), RangeError)
 })
+
+test('honors cycle boundaries and only reserves active commitments due inside the cycle', () => {
+  const summary = calculatePlanningCycleSummary({
+    cycle,
+    entries: [
+      entry({ id: 'opening', type: 'income', amountMinor: 2000000, occurredOn: '2026-07-31' }),
+      entry({ id: 'salary', type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01' }),
+      entry({ id: 'linked-payment', amountMinor: 1000000, occurredOn: '2026-08-02' }),
+      entry({ id: 'cycle-end', amountMinor: 9000000, occurredOn: '2026-09-01' }),
+      entry({ id: 'voided', amountMinor: 7000000, status: 'voided' }),
+    ],
+    commitments: [
+      commitment({
+        id: 'current',
+        plannedAmountMinor: 3000000,
+        dueOn: '2026-08-01',
+        linkedEntryIds: ['linked-payment'],
+      }),
+      commitment({ id: 'at-end', plannedAmountMinor: 5000000, dueOn: '2026-09-01' }),
+      commitment({ id: 'cancelled', plannedAmountMinor: 4000000, status: 'cancelled' }),
+      commitment({ id: 'settled', plannedAmountMinor: 2000000, status: 'settled' }),
+    ],
+    evaluationOn: '2026-08-31',
+  })
+
+  assert.equal(summary.openingActualMinor, 2000000)
+  assert.equal(summary.periodCreditsMinor, 10000000)
+  assert.equal(summary.periodDebitsMinor, 1000000)
+  assert.equal(summary.closingActualMinor, 11000000)
+  assert.equal(summary.reservedCommitmentMinor, 2000000)
+  assert.equal(summary.disposableBalanceMinor, 9000000)
+})
