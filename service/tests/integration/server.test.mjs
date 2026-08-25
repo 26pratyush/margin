@@ -246,6 +246,7 @@ test('previews and restores a versioned backup through the HTTP boundary', async
 
     const dataset = await fetch(`${context.url}/api/dataset`).then((response) => response.json())
     assert.equal(dataset.entries.length, 2)
+    assert.equal(dataset.planningCycles[0].cycleKey, '2026-08')
   } finally {
     await new Promise((resolve) => context.server.close(resolve))
     await rm(directory, { recursive: true, force: true })

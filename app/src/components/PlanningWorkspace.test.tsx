@@ -76,6 +76,7 @@ describe('PlanningWorkspace', () => {
         dueOn: '2026-08-01',
       })
     })
+    expect(screen.getByText(/overall actual balance stays/i)).toHaveTextContent('₹1,37,500.00')
   })
 
   it('validates a reserve before calling the persistence boundary', async () => {
