@@ -4,7 +4,7 @@
 
 The Margin finance application is developed and used locally. It is not deployed to GitHub Pages and does not need a hosted API or hosted database for the initial product.
 
-The v0.1 application is a browser SPA served locally from `http://localhost:5173`.
+The v0.1.0 application is a browser SPA served locally from `http://localhost:5173`.
 
 The canonical local workflow is a native npm workspace:
 
@@ -43,18 +43,27 @@ The site must build independently from the `site/` directory and contain no pers
 Containers are optional and are not required for the MARGIN-004 development path. The native npm workflow is faster for day-to-day work and remains the canonical contributor experience. A later `Containerfile` may provide a reproducible static build/preview path for CI or packaging.
 
 - The native local command remains the canonical path unless the runtime decision says otherwise.
-- Docker Desktop is optional for personal or non-commercial open-source development; Podman is an open-source-compatible alternative.
+- Docker Desktop is optional for personal or non-commercial development under the repository license; Podman is an open-source-compatible alternative.
 - Local data must use an ignored path or local volume and must never be copied into an image.
 - No container is deployed as a hosted finance service.
 
 ## Local packaging and backup
 
-The primary package is a source checkout with a committed npm lockfile. A local user runs the app with the documented npm command; no account, cloud service, or platform-specific installer is required for v0.1.
+The primary package is a source checkout with a committed npm lockfile. A local user runs the app with the documented npm command; no account, cloud service, or platform-specific installer is required for v0.1.0.
 
 The app stores records in a local SQLite file behind the loopback service and provides an explicit versioned JSON export/import path. CSV is available as a secondary export. Browser storage is not the primary ledger and is not treated as a backup because users can clear site data, use private browsing, change origins, or encounter quota eviction.
 
 ## Release rule
 
 Versioned software releases use `v0.x.y` Git tags and GitHub Releases. Release notes should identify the validated commit and include only source, documentation, or synthetic build artifacts. A public GitHub Container Registry image may be added later if the selected local runtime benefits from one; it is not required for v0.1.
+
+The first release sequence is:
+
+1. Run the root quality gate and the independent `site/` formatting, type-check, test, and build checks.
+2. Complete the synthetic local manual review and record the validated commit in [v0.1.0 release notes](RELEASE-v0.1.0.md).
+3. Merge the release-review Pull Request into `main` and confirm the Pages deployment publishes the current static site.
+4. Create the annotated `v0.1.0` tag and GitHub Release from that validated `main` commit.
+
+The finance app is not deployed as part of the Pages workflow. A release must not contain a local SQLite file, exported backup, credentials, or real financial data. The repository is source-available under the [PolyForm Noncommercial License 1.0.0](../LICENSE); the license grants no commercial-use rights, so commercial use requires separate written permission unless another legal exception applies.
 
 The product website can be published after a coherent set of screenshots and product explanations exists. The finance app does not need to be publicly reachable for the website to be useful.

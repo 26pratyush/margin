@@ -14,6 +14,12 @@ GitHub ── source, issues, PRs, project tracking, Wiki, releases
 GitHub Pages ── static product/demo website only
 ```
 
+## v0.1.0 release boundary
+
+The first release is a usable local-first development release, not a hosted finance product. Its public promise is the smallest complete loop: record salary and expenses, plan a calendar month, reserve commitments without rewriting actual cash, understand disposable balance, and recover the local dataset through versioned JSON.
+
+The static site may explain and demonstrate this loop with synthetic values, but it never imports the finance application, calls the loopback service, or receives user records. GitHub Releases contain source, documentation, and synthetic artifacts only. The public data and API contracts remain subject to deliberate stabilization before v1.0.0.
+
 The product website is not the finance application. It must not call a Margin API or connect to the user's financial data.
 
 ## Selected v0.1 application shape

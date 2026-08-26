@@ -12,13 +12,13 @@ The primary user is someone starting their first job and receiving a regular sal
 
 ## Core user outcome
 
-At any point in a pay period, the user should be able to answer:
+At any point in a calendar month, the user should be able to answer:
 
 1. How much money came in?
 2. How much has been spent?
 3. How much is reserved for SIPs, RDs, and recurring commitments?
 4. How much remains available for discretionary spending?
-5. Where is spending concentrated this week or month?
+5. What is planned, what has moved, and what remains available?
 
 ## Product principles
 
@@ -34,19 +34,26 @@ At any point in a pay period, the user should be able to answer:
 
 ## Product boundaries
 
-### In scope
+### v0.1.0 scope
 
 - Monthly salary and income entries.
-- One-time and recurring expenses.
+- One-time expenses.
 - User-defined categories.
-- Weekly, monthly, and custom-range summaries.
-- SIP, RD, and other planned commitments.
-- Remaining disposable balance calculations.
-- Charts and trend views.
-- Local export and backup.
+- Monthly planning and rollover.
+- Expected versus actual salary.
+- Planned commitments, remaining reservations, and disposable balance.
+- The monthly locker visualization for planned reserves.
+- Local JSON export, validation, restore, reconciliation, and safe reset.
 - Static public product/demo website.
 
-### Not part of the first version
+### Later roadmap work
+
+- Editing and deletion of ledger entries.
+- Weekly and custom-range summaries.
+- Recurring commitment automation.
+- Charts, trend views, and broad insights.
+
+### Not part of v0.1.0
 
 - Bank account aggregation.
 - Automatic transaction imports.
@@ -80,8 +87,9 @@ At any point in a pay period, the user should be able to answer:
 - The static product/demo site will deploy from `site/` to GitHub Pages through GitHub Actions; the finance app has no hosted deployment boundary.
 - Containers are optional local development and packaging tooling. The browser runtime is selected; any reproducible Docker or Podman setup belongs to `MARGIN-004`.
 - Versioned releases use Git tags and GitHub Releases. Public container images are optional and must contain no personal data.
+- `v0.1.0` is the first coherent local planning release; it communicates initial-development status rather than a percentage of product completion. Public data and API contracts remain subject to stabilization before v1.0.0.
 - The v0.1 finance app is a browser-based local SPA served from `localhost`.
-- The v0.1 UI stack is React, TypeScript, and Vite on Node.js 24 LTS with npm.
+- The v0.1.0 UI stack is React, TypeScript, and Vite on Node.js 24 LTS with npm.
 - The repository root provides the canonical npm workspace commands; `app/` contains the finance application and `site/` remains an independent website boundary.
 - Local persistence uses a loopback-only Node service with a file-backed SQLite database behind a typed repository interface; there is no sync or hosted database.
 - JSON is the lossless backup format and CSV is a secondary interoperability export.
@@ -94,8 +102,7 @@ At any point in a pay period, the user should be able to answer:
 
 ## Open decisions
 
-- License.
-- First release scope after the foundation vertical slice.
+- The next smallest product slice after v0.1.0.
 - Optional PWA installation or desktop packaging if browser constraints justify it.
 
 ## Working rule for future chats

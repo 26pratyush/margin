@@ -6,7 +6,7 @@ Margin is a local-first personal finance tracker for understanding where money g
 
 ## Project status
 
-Margin is in the foundation stage. The local application now runs a browser UI with a loopback-only Node service and file-backed SQLite persistence.
+Margin is preparing its first coherent `v0.1.0` release. The local application runs a browser UI with a loopback-only Node service and file-backed SQLite persistence, with salary, expense, monthly planning, commitments, disposable balance, locker, and JSON recovery flows in place.
 
 [Click here to access the website](https://26pratyush.github.io/margin/)
 
@@ -14,14 +14,16 @@ Margin is in the foundation stage. The local application now runs a browser UI w
 
 Margin is designed for someone starting their first job and wanting a granular but calm way to manage money without mindless spending (aka Jordans and foreign booze).
 
-The first useful version should make it easy to:
+The current v0.1.0 loop makes it easy to:
 
 - Add a monthly salary with one clear action.
 - Record expenses with categories, dates, notes, and amounts.
-- Break down spending by week, month, category, or custom range.
-- See income, spending, planned savings, and remaining disposable money together.
-- Model SIPs, RDs, and other recurring commitments.
-- Generate useful charts without turning the interface into a dashboard wall.
+- Plan a calendar month without confusing expected salary with actual cash.
+- See income, spending, planned savings, commitments, actual balance, and disposable money together.
+- Reserve money in the monthly locker without treating a plan as a completed debit.
+- Export, validate, restore, reconcile, and safely reset local records.
+
+Broader filtering, editing, recurring commitments, charts, and automation remain roadmap work rather than hidden v0.1 promises.
 
 ## Product boundaries
 
@@ -59,6 +61,7 @@ margin/
 - [Testing and quality gates](docs/TESTING.md)
 - [Design system](docs/DESIGN_SYSTEM.md)
 - [Product website](site/README.md)
+- [v0.1.0 release notes](docs/RELEASE-v0.1.0.md)
 - [Stack decision](docs/decisions/ADR-001-local-browser-stack.md)
 - [GitHub bootstrap checklist](docs/GITHUB_BOOTSTRAP.md)
 - [Roadmap](project/ROADMAP.md)
@@ -111,13 +114,14 @@ Work should generally follow this path:
 6. Run local checks and review the change.
 7. Merge into `main` only when the issue's acceptance criteria are met.
 
-The v0.1 application stack and local persistence decision are recorded in the [stack decision](docs/decisions/ADR-001-local-browser-stack.md) and [domain model decision](docs/decisions/ADR-002-domain-model-and-balance-rules.md).
+The v0.1.0 application stack and local persistence decision are recorded in the [stack decision](docs/decisions/ADR-001-local-browser-stack.md) and [domain model decision](docs/decisions/ADR-002-domain-model-and-balance-rules.md).
 
 ## Delivery and release boundary
 
 - The finance application runs locally and is never deployed with the public website.
 - The static product/demo website is built from `site/` and published to GitHub Pages through GitHub Actions.
 - Versioned software releases use Git tags and GitHub Releases. They must contain source or synthetic build artifacts only.
+- The first release target is `v0.1.0`; release preparation and its evidence are tracked in [MARGIN-015](project/tasks/MARGIN-015-planning-release-boundary-review.md).
 - Containers are optional development and packaging tooling. Any reproducible container setup belongs to `MARGIN-004`.
 
 ## Local data and privacy
@@ -128,4 +132,6 @@ Never commit real financial data, local database files, credentials, or producti
 
 ## License
 
-The licensing decision is still open and should be made before the first public release.
+Margin is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE). It permits personal and other permitted noncommercial use, modification, and redistribution subject to the license terms. The license grants no commercial-use rights; commercial use requires separate written permission from the copyright holder unless another legal exception applies.
+
+This is intentionally not an OSI-approved open-source license: the Open Source Definition requires commercial use to be allowed. Third-party dependencies and assets remain under their own licenses.

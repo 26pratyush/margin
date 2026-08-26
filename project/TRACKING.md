@@ -45,11 +45,11 @@ Table filtered to `Area = Demo site`, showing website content, screenshots, and 
 
 ## Milestones
 
-- v0.1 Foundation
+- v0.1 First local planning release
 - v0.2 Core tracking
 - v0.3 Commitments and insights
 - v0.4 Safety and polish
-- v1.0 Personal release
+- v1.0 Stable personal release
 
 ## Automation intentions
 

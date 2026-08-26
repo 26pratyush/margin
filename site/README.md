@@ -1,6 +1,8 @@
 # Margin product website
 
-The public Margin product website is a static React/Vite site. It explains the product and its local-first boundary without importing the finance application, calling an API, or containing personal financial data.
+The public Margin product website is a static React/Vite site for the v0.1.0 release. It explains the salary-to-disposable-money loop, including monthly planning and the locker visualization, without importing the finance application, calling an API, or containing personal financial data.
+
+The site is a product explanation and demo surface, not the finance application. It must stay useful even when the local app is not running.
 
 ## Local development
 
@@ -24,7 +26,9 @@ npm run build
 npm run preview
 ```
 
-The site uses synthetic product values and the checked-in screenshots in `site/public/screenshots/` only. It is independent from the local finance app and does not need the Margin service running.
+The site uses synthetic product values and the checked-in screenshots in `site/public/screenshots/` only. It is independent from the local finance app and does not need the Margin service running. Keep public examples clearly synthetic and never copy local database records into screenshots or page content.
+
+The public release notes live in [`docs/RELEASE-v0.1.0.md`](../docs/RELEASE-v0.1.0.md). The site should link to the release notes, local setup, architecture, and privacy boundary rather than implying that GitHub Pages hosts the finance app.
 
 ## GitHub Pages publishing
 

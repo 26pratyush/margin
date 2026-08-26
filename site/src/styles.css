@@ -461,6 +461,11 @@ svg {
   background: var(--surface);
 }
 
+.product-mock-planning {
+  min-height: 385px;
+  background: radial-gradient(circle at 18% 42%, rgba(181, 226, 99, 0.1), transparent 28%), var(--surface);
+}
+
 .mock-topline,
 .mock-heading-row,
 .mock-balance-top,
@@ -668,6 +673,78 @@ svg {
 
 .mock-metric-accent b {
   color: var(--accent);
+}
+
+.mock-planning-grid {
+  display: grid;
+  grid-template-columns: minmax(125px, 0.85fr) minmax(0, 1.15fr);
+  gap: 11px;
+  margin-top: 21px;
+}
+
+.mock-locker,
+.mock-planning-grid .mock-detail-list {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(25, 29, 27, 0.72);
+}
+
+.mock-locker {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  min-height: 215px;
+  padding: 15px;
+  text-align: center;
+}
+
+.mock-locker-door {
+  display: grid;
+  width: 94px;
+  height: 94px;
+  place-items: center;
+  border: 1px solid rgba(190, 226, 106, 0.55);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(130, 201, 208, 0.24) 0 10%, transparent 11%),
+    linear-gradient(145deg, rgba(183, 227, 99, 0.17), rgba(26, 39, 34, 0.84));
+  box-shadow:
+    0 0 0 6px rgba(182, 226, 98, 0.06),
+    0 14px 30px rgba(0, 0, 0, 0.22);
+}
+
+.mock-locker-door span {
+  color: var(--accent);
+  font-size: 1.3rem;
+  text-shadow: 0 0 18px rgba(183, 227, 99, 0.75);
+}
+
+.mock-locker small {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+
+.mock-locker strong {
+  color: var(--accent);
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.mock-planning-grid .mock-detail-list {
+  display: grid;
+  align-content: center;
+}
+
+.mock-detail-accent {
+  color: var(--accent) !important;
+}
+
+.mock-planning-copy {
+  max-width: none;
+  margin-top: 14px;
 }
 
 .manifesto {
@@ -963,6 +1040,11 @@ svg {
 
 .surface-card-3 {
   grid-column: 4 / span 6;
+  padding-top: 45px;
+}
+
+.surface-card-4 {
+  grid-column: 3 / span 8;
   padding-top: 45px;
 }
 
@@ -1351,6 +1433,17 @@ svg {
   text-align: center;
 }
 
+.site-footer-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.site-footer-copy small {
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  line-height: 1.5;
+}
+
 .site-footer > div {
   display: flex;
   justify-content: end;
@@ -1405,6 +1498,10 @@ svg {
   }
 
   .surface-card-3 {
+    grid-column: 3 / span 8;
+  }
+
+  .surface-card-4 {
     grid-column: 3 / span 8;
   }
 }
@@ -1481,6 +1578,14 @@ svg {
 
   .product-mock-overview {
     min-height: 320px;
+  }
+
+  .mock-planning-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mock-locker {
+    min-height: 170px;
   }
 
   .mock-overview-grid {
@@ -1575,7 +1680,8 @@ svg {
 
   .surface-card,
   .surface-card-2,
-  .surface-card-3 {
+  .surface-card-3,
+  .surface-card-4 {
     padding-top: 0;
     margin-top: 52px;
   }

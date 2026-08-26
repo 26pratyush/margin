@@ -14,4 +14,5 @@ Margin is a local-first personal finance tracker. This Wiki is the long-form pro
 
 - [Repository README](../README.md)
 - [Project context](../docs/PROJECT_CONTEXT.md)
+- [v0.1.0 release notes](../docs/RELEASE-v0.1.0.md)
 - [First epic](../project/epics/EPIC-001-foundation.md)
