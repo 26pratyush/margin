@@ -24,7 +24,14 @@ const workflowSteps: WorkflowStep[] = [
     note: 'actual balance',
   },
   {
-    eyebrow: '03 / Commitments',
+    eyebrow: '03 / Planning',
+    title: 'Give the month a shape before it starts.',
+    description: 'Set an expected salary and see what has arrived without turning a plan into a cash movement.',
+    value: '₹100,000',
+    note: 'monthly plan',
+  },
+  {
+    eyebrow: '04 / Commitments',
     title: 'Separate plans from money already gone.',
     description:
       'SIPs, bills, and future obligations reserve money without pretending they have already left your account.',
@@ -32,7 +39,7 @@ const workflowSteps: WorkflowStep[] = [
     note: 'after commitments',
   },
   {
-    eyebrow: '04 / Margin',
+    eyebrow: '05 / Margin',
     title: 'See the number you can actually use.',
     description:
       'Margin gives you a calm answer to a practical question: what is still available after the things that matter?',
@@ -68,6 +75,15 @@ const screenshotSources = [
     title: 'A quieter answer to “what remains?”',
     description: 'Income, spending, commitments, and disposable balance in one considered view.',
     variant: 'overview' as const,
+    mockOnly: false,
+  },
+  {
+    filename: 'planning.png',
+    eyebrow: 'The monthly plan',
+    title: 'Keep future money visible, not imaginary.',
+    description: 'The monthly locker makes a reserve feel clear while actual balance stays honest.',
+    variant: 'planning' as const,
+    mockOnly: true,
   },
   {
     filename: 'transactions.png',
@@ -75,6 +91,7 @@ const screenshotSources = [
     title: 'Details when they earn their place.',
     description: 'Add a record in a few fields, then return to the full picture without a page reload.',
     variant: 'transactions' as const,
+    mockOnly: false,
   },
   {
     filename: 'settings.png',
@@ -82,6 +99,7 @@ const screenshotSources = [
     title: 'Private does not have to mean opaque.',
     description: 'Local storage and JSON backup are visible, understandable parts of the product.',
     variant: 'settings' as const,
+    mockOnly: false,
   },
 ]
 
@@ -110,7 +128,7 @@ function MarginMark({ small = false }: { small?: boolean }) {
   )
 }
 
-function ProductMock({ variant }: { variant: 'overview' | 'transactions' | 'settings' }) {
+function ProductMock({ variant }: { variant: 'overview' | 'planning' | 'transactions' | 'settings' }) {
   if (variant === 'transactions') {
     return (
       <div className="product-mock product-mock-transactions">
@@ -192,6 +210,52 @@ function ProductMock({ variant }: { variant: 'overview' | 'transactions' | 'sett
     )
   }
 
+  if (variant === 'planning') {
+    return (
+      <div className="product-mock product-mock-planning">
+        <div className="mock-topline">
+          <span className="mock-kicker">Workspace / Planning</span>
+          <span className="mock-connection">
+            <i /> Local month
+          </span>
+        </div>
+        <div className="mock-heading-row mock-heading-row-compact">
+          <div>
+            <span className="mock-label">August 2026</span>
+            <strong>The monthly locker.</strong>
+          </div>
+          <span className="mock-mark">✦</span>
+        </div>
+        <div className="mock-planning-grid">
+          <div className="mock-locker">
+            <div className="mock-locker-door">
+              <span>✦</span>
+            </div>
+            <small>reserved this cycle</small>
+            <strong>₹30,000</strong>
+          </div>
+          <div className="mock-detail-list">
+            <span>
+              <small>Actual balance</small>
+              <b>₹78,750</b>
+            </span>
+            <span>
+              <small>Disposable</small>
+              <b className="mock-detail-accent">₹48,750</b>
+            </span>
+            <span>
+              <small>Expected salary</small>
+              <b>₹100,000</b>
+            </span>
+          </div>
+        </div>
+        <p className="mock-copy mock-planning-copy">
+          Reserved is not spent. The plan stays visible until money actually moves.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="product-mock product-mock-overview">
       <div className="mock-topline">
@@ -250,9 +314,11 @@ function ProductMock({ variant }: { variant: 'overview' | 'transactions' | 'sett
 function ScreenshotFrame({
   filename,
   variant,
+  mockOnly = false,
 }: {
   filename: string
-  variant: 'overview' | 'transactions' | 'settings'
+  variant: 'overview' | 'planning' | 'transactions' | 'settings'
+  mockOnly?: boolean
 }) {
   const [missing, setMissing] = useState(false)
   const source = `${import.meta.env.BASE_URL}screenshots/${filename}`
@@ -265,7 +331,11 @@ function ScreenshotFrame({
         <span />
         <small>margin / local workspace</small>
       </div>
-      {missing ? <ProductMock variant={variant} /> : <img src={source} alt="" onError={() => setMissing(true)} />}
+      {missing || mockOnly ? (
+        <ProductMock variant={variant} />
+      ) : (
+        <img src={source} alt="" onError={() => setMissing(true)} />
+      )}
     </div>
   )
 }
@@ -347,14 +417,14 @@ function App() {
         <section className="hero section-shell" aria-labelledby="hero-title">
           <div className="hero-copy">
             <p className="eyebrow eyebrow-accent">
-              <span className="eyebrow-dot" /> Personal finance, locally.
+              <span className="eyebrow-dot" /> Personal finance, locally. / v0.1.0
             </p>
             <h1 id="hero-title">
               Make room for <em>what remains.</em>
             </h1>
             <p className="hero-lede">
-              Margin brings income, spending, and commitments into one quiet view—so the number you can actually use is
-              never hidden.
+              Margin brings salary, spending, monthly planning, and commitments into one quiet view—so the number you
+              can actually use is never hidden.
             </p>
             <div className="hero-actions">
               <a className="button button-primary" href="#how-it-works">
@@ -442,7 +512,9 @@ function App() {
                   <span>
                     <i /> Synthetic workspace
                   </span>
-                  <span>{String(activeStep + 1).padStart(2, '0')} / 04</span>
+                  <span>
+                    {String(activeStep + 1).padStart(2, '0')} / {String(workflowSteps.length).padStart(2, '0')}
+                  </span>
                 </div>
                 <div className="preview-balance">
                   <small>{workflowSteps[activeStep].note}</small>
@@ -464,8 +536,10 @@ function App() {
                       : activeStep === 1
                         ? '− ₹21,250'
                         : activeStep === 2
-                          ? '− ₹10,000'
-                          : '₹68,750'}
+                          ? 'expected ₹100,000'
+                          : activeStep === 3
+                            ? '− ₹10,000'
+                            : '₹68,750'}
                   </b>
                 </div>
                 <div className="preview-foot">
@@ -489,7 +563,11 @@ function App() {
           <div className="surface-grid">
             {screenshotSources.map((screenshot, index) => (
               <figure className={`surface-card surface-card-${index + 1}`} key={screenshot.filename}>
-                <ScreenshotFrame filename={screenshot.filename} variant={screenshot.variant} />
+                <ScreenshotFrame
+                  filename={screenshot.filename}
+                  mockOnly={screenshot.mockOnly}
+                  variant={screenshot.variant}
+                />
                 <figcaption>
                   <p className="eyebrow">{screenshot.eyebrow}</p>
                   <h3>{screenshot.title}</h3>
@@ -506,7 +584,8 @@ function App() {
             <h2 id="local-title">Private by default. Portable when you need it.</h2>
             <p>
               Margin runs on your computer. The browser is the interface, not the database. A versioned JSON backup
-              gives you a clear way to move or recover your data.
+              gives you a clear way to move or recover your data, while the monthly locker keeps planned money separate
+              from actual cash.
             </p>
             <a
               className="text-link"
@@ -599,7 +678,13 @@ function App() {
           <MarginMark small />
           <span>Margin</span>
         </a>
-        <span>Personal finance, locally.</span>
+        <span className="site-footer-copy">
+          <span>Personal finance, locally.</span>
+          <small>
+            Copyright © 2026 Pratyush. All rights reserved except as expressly granted by the PolyForm Noncommercial
+            License 1.0.0.
+          </small>
+        </span>
         <div>
           <a href="https://github.com/26pratyush/margin" target="_blank" rel="noreferrer">
             GitHub <ExternalIcon />
@@ -610,6 +695,16 @@ function App() {
             rel="noreferrer"
           >
             Architecture <ExternalIcon />
+          </a>
+          <a
+            href="https://github.com/26pratyush/margin/blob/main/docs/RELEASE-v0.1.0.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            v0.1.0 notes <ExternalIcon />
+          </a>
+          <a href="https://github.com/26pratyush/margin/blob/main/LICENSE" target="_blank" rel="noreferrer">
+            License <ExternalIcon />
           </a>
         </div>
       </footer>

@@ -14,3 +14,4 @@ Each task brief is deliberately concise but contains enough context for a separa
 - [MARGIN-011 — Monthly planning and rollover rules](MARGIN-011-monthly-planning-and-rollover.md)
 - [MARGIN-012 — Opening balance and salary planning](MARGIN-012-opening-balance-and-salary-planning.md)
 - [MARGIN-014 — Salary-planning regression and manual verification](MARGIN-014-salary-planning-regression-and-manual-verification.md)
+- [MARGIN-015 — Planning release-boundary review](MARGIN-015-planning-release-boundary-review.md)

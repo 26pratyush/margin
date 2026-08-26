@@ -2,12 +2,13 @@
 
 The roadmap is intentionally outcome-based. Dates should be added only when there is a realistic time commitment.
 
-## v0.1 — Foundation
+## v0.1 — First local planning release
 
 - Confirm the local-first boundary.
 - Choose the application stack and persistence approach.
 - Establish local development, testing, and documentation conventions.
-- Build a minimal local shell and first vertical slice.
+- Build the salary, expense, planning, commitment, disposable-balance, and locker loop.
+- Publish the static product/demo website and document the first release boundary.
 
 ## v0.2 — Core tracking
 
@@ -30,8 +31,8 @@ The roadmap is intentionally outcome-based. Dates should be added only when ther
 - Improve accessibility, empty states, and error handling.
 - Prepare synthetic data and screenshots.
 
-## v1.0 — Personal release and product site
+## v1.0 — Stable personal release
 
-- Stabilize the local application.
-- Publish the static product/demo website.
-- Document the final architecture and known limitations.
+- Declare the public data and API contracts stable after real-world validation.
+- Revisit packaging or installation only if the local browser boundary proves insufficient.
+- Publish a compatibility commitment for future migrations and releases.

@@ -52,4 +52,4 @@ The existing actual-balance, commitment-reservation, reconciliation, local SQLit
 
 ## Completion notes
 
-When this epic is complete, update `docs/PROJECT_CONTEXT.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_DATA.md`, `docs/TESTING.md`, and the Wiki decision log with the implemented boundaries and verification evidence. Keep the next product slice separate from broader budgeting, automation, or hosted-data work.
+When this epic is complete, update `docs/PROJECT_CONTEXT.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_DATA.md`, `docs/TESTING.md`, and the Wiki decision log with the implemented boundaries and verification evidence. MARGIN-015 owns the v0.1.0 release-boundary review and release notes at [docs/RELEASE-v0.1.0.md](../../docs/RELEASE-v0.1.0.md). Keep the next product slice separate from broader budgeting, automation, or hosted-data work.

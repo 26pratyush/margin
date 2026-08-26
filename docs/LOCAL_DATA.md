@@ -34,13 +34,13 @@ The current envelope contains:
 
 The service still accepts the original flat v1 backup shape and migrates it in memory. New exports use v2. An app rejects unsupported future versions rather than silently dropping fields.
 
-Dataset schema version 2 adds the `planningCycles` collection while keeping the backup envelope at format version 2. Flat v1 backups and v2 backups created before planning cycles are normalized with an empty planning-cycle collection, so existing records remain readable. New planning-cycle records are sorted and included in the integrity digest like every other collection.
+Dataset schema version 2 adds the `planningCycles` collection while keeping the backup envelope at format version 2. Flat v1 backups and v2 backups created before planning cycles are normalized with an empty planning-cycle collection, so existing records remain readable. New planning-cycle records are sorted and included in the integrity digest like every other collection. This is the v0.1.0 recovery contract.
 
 The SQLite migration adds a per-record schema marker to the existing generic `records` table. Existing records retain version 1, while planning-cycle records use version 2; no second planning-specific database table is introduced.
 
 Restore validates the full file, verifies its integrity digest, checks cross-record references, shows a preview in the browser, creates a local pre-restore recovery snapshot, and replaces the dataset in one SQLite transaction. Invalid files cannot change the current dataset.
 
-The browser provides download and file-picker based restore, so a backup can be saved outside the application, used after clearing browser data, or imported in another browser or machine. Raw SQLite archives are intentionally out of scope for v0.1; they add WAL, locking, and schema portability concerns without improving the browser-based recovery path.
+The browser provides download and file-picker based restore, so a backup can be saved outside the application, used after clearing browser data, or imported in another browser or machine. Raw SQLite archives are intentionally out of scope for v0.1.0; they add WAL, locking, and schema portability concerns without improving the browser-based recovery path.
 
 ## Local recovery snapshots
 
