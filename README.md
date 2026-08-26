@@ -122,6 +122,7 @@ The v0.1.0 application stack and local persistence decision are recorded in the 
 - The static product/demo website is built from `site/` and published to GitHub Pages through GitHub Actions.
 - Versioned software releases use Git tags and GitHub Releases. They must contain source or synthetic build artifacts only.
 - The first release target is `v0.1.0`; release preparation and its evidence are tracked in [MARGIN-015](project/tasks/MARGIN-015-planning-release-boundary-review.md).
+- The published [`v0.1.0` release](https://github.com/26pratyush/margin/releases/tag/v0.1.0) and [static product website](https://26pratyush.github.io/margin/) are available; interactive browser review remains a documented follow-up.
 - Containers are optional development and packaging tooling. Any reproducible container setup belongs to `MARGIN-004`.
 
 ## Local data and privacy

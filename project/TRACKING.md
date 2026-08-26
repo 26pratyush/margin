@@ -4,6 +4,10 @@ Create one GitHub Project named `Margin — Product Development` and connect the
 
 The project has been created for `26pratyush/margin`, and the initial Epic and child task issues are in Backlog. GitHub remains the interactive source of truth; this file defines the durable field, view, and workflow conventions.
 
+## Current release status
+
+`v0.1.0` was released from validated `main` commit `269a1f3` on 2026-08-26. See the [GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0) and [live product website](https://26pratyush.github.io/margin/). Interactive browser review remains a documented follow-up; the next product slice is safe ledger correction and must be tracked separately.
+
 ## Recommended fields
 
 | Field          | Values or purpose                                     |

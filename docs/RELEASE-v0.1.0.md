@@ -1,6 +1,6 @@
 # Margin v0.1.0 release notes
 
-Status: release preparation draft. The implementation boundary and repository license are selected; final publication still requires the release review and a validated merge commit.
+Status: Published on 2026-08-26 from validated `main` commit `269a1f3`. See the [GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0) and the [live product website](https://26pratyush.github.io/margin/).
 
 ## What is included
 
@@ -46,7 +46,7 @@ npm run build
 
 The manual review must use synthetic data only and cover salary/expense creation, planning update, restart, reserve-versus-actual behavior, JSON validation and restore, reset, invalid input, negative disposable balance, and zero balance.
 
-The MARGIN-015 release-boundary run completed the automated and synthetic checks on 2026-08-26. The evidence is recorded in [the testing log](TESTING.md): root quality, independent site checks, local restart persistence, backup/restore, reset, negative disposable, and zero-balance behavior passed. Interactive browser review, merge, Pages deployment verification, and the final tag/Release remain publication gates.
+The MARGIN-015 release-boundary run completed the automated and synthetic checks on 2026-08-26. The evidence is recorded in [the testing log](TESTING.md): root quality, independent site checks, local restart persistence, backup/restore, reset, negative disposable, and zero-balance behavior passed. Interactive browser review remains a documented follow-up; merge, Pages deployment verification, and the final tag/Release are complete.
 
 ## Next product decision
 
@@ -59,9 +59,9 @@ The finance application is not deployed to GitHub Pages. Real financial data, SQ
 ## Release checklist
 
 - [x] Select and add the PolyForm Noncommercial License 1.0.0.
-- [ ] Complete MARGIN-015 review and record pass/follow-up evidence.
-- [ ] Merge the release-review Pull Request into `main`.
-- [ ] Confirm the GitHub Pages workflow deploys the current site.
-- [ ] Create the annotated `v0.1.0` tag on the validated `main` commit.
-- [ ] Create the GitHub Release using these notes and the validated commit.
-- [ ] Update issue #28, Epic #22, roadmap, and project status with the release links.
+- [x] Complete MARGIN-015 review and record pass/follow-up evidence.
+- [x] Merge the release-review Pull Request into `main`.
+- [x] Confirm the GitHub Pages workflow deploys the current site.
+- [x] Create the annotated `v0.1.0` tag on the validated `main` commit.
+- [x] Create the GitHub Release using these notes and the validated commit.
+- [x] Update issue #28, Epic #22, roadmap, and project status with the release links.

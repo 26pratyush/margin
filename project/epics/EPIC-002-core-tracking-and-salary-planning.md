@@ -52,4 +52,4 @@ The existing actual-balance, commitment-reservation, reconciliation, local SQLit
 
 ## Completion notes
 
-When this epic is complete, update `docs/PROJECT_CONTEXT.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_DATA.md`, `docs/TESTING.md`, and the Wiki decision log with the implemented boundaries and verification evidence. MARGIN-015 owns the v0.1.0 release-boundary review and release notes at [docs/RELEASE-v0.1.0.md](../../docs/RELEASE-v0.1.0.md). Keep the next product slice separate from broader budgeting, automation, or hosted-data work.
+This epic was completed for the first local planning release on validated `main` commit `269a1f3`. See the [v0.1.0 GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0), [live product website](https://26pratyush.github.io/margin/), and [release notes](../../docs/RELEASE-v0.1.0.md). The next product slice remains separate from broader budgeting, automation, or hosted-data work.
