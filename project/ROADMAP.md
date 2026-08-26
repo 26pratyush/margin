@@ -4,6 +4,8 @@ The roadmap is intentionally outcome-based. Dates should be added only when ther
 
 ## v0.1 — First local planning release
 
+Status: Released as [`v0.1.0`](https://github.com/26pratyush/margin/releases/tag/v0.1.0) on 2026-08-26. The [static product website](https://26pratyush.github.io/margin/) is live; interactive browser review remains a documented follow-up.
+
 - Confirm the local-first boundary.
 - Choose the application stack and persistence approach.
 - Establish local development, testing, and documentation conventions.

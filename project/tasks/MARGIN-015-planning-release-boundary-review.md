@@ -36,7 +36,7 @@ The release explicitly excludes hosted accounts, bank integrations, cloud sync, 
 
 ## Review outcome
 
-The automated and synthetic release-boundary checks passed on 2026-08-26; the evidence is recorded in [the testing log](../../docs/TESTING.md). Interactive browser review, merge, Pages verification, and the final tag/Release remain explicit publication gates. The repository license gate is complete with [PolyForm Noncommercial License 1.0.0](../../LICENSE).
+The automated and synthetic release-boundary checks passed on 2026-08-26; the evidence is recorded in [the testing log](../../docs/TESTING.md). The release-review Pull Request was merged, Pages deployment was verified, and `v0.1.0` was tagged and published from validated `main` commit `269a1f3` in the [GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0). Interactive browser review remains a documented follow-up. The repository license gate is complete with [PolyForm Noncommercial License 1.0.0](../../LICENSE).
 
 The recommended next smallest product slice is safe ledger correction—edit or void an existing salary or expense with explicit confirmation and recalculated summaries. It remains a separate follow-up issue and is not implemented here.
 
