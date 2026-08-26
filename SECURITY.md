@@ -6,7 +6,7 @@ Margin is local-first by design. The working finance application is not intended
 
 - Do not commit real salary, expense, account, or investment data.
 - Do not commit secrets or local environment files.
-- Keep the Render product website free of personal financial data.
+- Keep the Pages product website free of personal financial data.
 - Use synthetic or clearly redacted data in screenshots and fixtures.
 - Treat import, export, and backup functionality as security-sensitive features.
 - Record meaningful privacy decisions in the Wiki decision log.
