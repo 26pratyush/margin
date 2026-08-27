@@ -55,3 +55,7 @@ After v0.1.0, the recommended next slice is safe ledger correction: editing or v
 ## D-011 — PolyForm Noncommercial licensing
 
 Margin is source-available under the PolyForm Noncommercial License 1.0.0. It permits personal and other permitted noncommercial use, modification, and redistribution while reserving commercial rights. This intentionally is not OSI-approved open source because the Open Source Definition requires commercial use to be allowed. Third-party dependencies and assets retain their own licenses.
+
+## D-012 — Post-v0.1 work prioritizes everyday trust
+
+After the v0.1.0 release, EPIC-003 prioritizes safe correction of ordinary salary and expense records, period-based history review, progressive expense metadata, and isolated synthetic onboarding. Investment portfolio valuation is deferred until Margin defines cost basis, current-value sources, realized versus unrealized performance, and liquidation semantics. Developer skills and broad Actions improvements remain a separate workflow epic.
