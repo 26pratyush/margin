@@ -681,7 +681,7 @@ function App() {
         <span className="site-footer-copy">
           <span>Personal finance, locally.</span>
           <small>
-            Copyright © 2026 Pratyush. All rights reserved except as expressly granted by the PolyForm Noncommercial
+            Copyright © 2026 Pratyush (26pratyush). All rights reserved except as expressly granted by the PolyForm Noncommercial
             License 1.0.0.
           </small>
         </span>
