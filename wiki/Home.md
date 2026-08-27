@@ -9,7 +9,6 @@ Margin is a local-first personal finance tracker. This Wiki is the long-form pro
 - [Privacy and Data](Privacy-and-Data.md)
 - [Project Workflow](Project-Workflow.md)
 - [Decision Log](Decision-Log.md)
-- [Next Work and Idea Triage](Next-Work.md)
 
 ## Quick links
 
