@@ -14,10 +14,13 @@ Status: Released as [`v0.1.0`](https://github.com/26pratyush/margin/releases/tag
 
 ## v0.2 — Core tracking
 
-- Add salary and income entries.
-- Add expense entry, editing, deletion, and categories.
-- Add weekly and monthly filtering.
-- Calculate available disposable balance.
+Status: Planned as [EPIC-003 — Everyday tracking, safe ledger correction, and onboarding](epics/EPIC-003-everyday-tracking-and-safe-ledger-correction.md), beginning with safe correction before analytics or integrations.
+
+- Define and implement safe editing/voiding for active salary and expense entries.
+- Add weekly/monthly transaction history filters without changing global balances.
+- Make expense name and category progressive metadata with an explicit uncategorized state.
+- Add a concise first-use guide and isolated synthetic demo mode.
+- Re-run the full local-first regression and accessibility review for the expanded everyday flow.
 
 ## v0.3 — Commitments and insights
 

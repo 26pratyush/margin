@@ -1,0 +1,31 @@
+# Next Work and Idea Triage
+
+Reviewed 2026-08-27 after the v0.1.0 release. The next product epic is [EPIC-003 — Everyday tracking, safe ledger correction, and onboarding](https://github.com/26pratyush/margin/issues/38). The table below is formatted for direct pasting into the Margin Wiki.
+
+| Suggestion / item                                                 | Status                                 | Recommendation / linked work                                                                                                                                                                                                  |
+| ----------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add Skills                                                        | Deferred                               | `SKILLS/` contains placeholders. Keep this in a separate developer-workflow epic rather than mixing tooling with product behavior.                                                                                            |
+| Standard PR Template                                              | Already added                          | `.github/PULL_REQUEST_TEMPLATE.md` exists and was used for the v0.1.0 release work.                                                                                                                                           |
+| Data storage and data model                                       | Complete in v0.1.0                     | Covered by the local SQLite boundary, versioned JSON backup/restore, [architecture](../docs/ARCHITECTURE.md), [local-data guidance](../docs/LOCAL_DATA.md), and ADR-002. Future extensions must remain backward-compatible.   |
+| Restore JSON/CSV backup                                           | JSON complete; CSV remains export-only | JSON is the lossless restore format. CSV should remain interoperability/export-only until a separate lossless contract is designed.                                                                                           |
+| Salary balance “locker”                                           | Complete in v0.1.0                     | The monthly locker visualization and reserve-versus-actual semantics are shipped. Do not expand it into an investment vault in EPIC-003.                                                                                      |
+| Regression tests and suites                                       | Baseline complete; ongoing             | The v0.1.0 quality gate is established. Each EPIC-003 behavior adds focused tests; [#44 / MARGIN-021](https://github.com/26pratyush/margin/issues/44) owns the final review.                                                  |
+| Better Actions workflows                                          | Partially added; deferred              | `local-app-check.yml` and `site-pages.yml` exist. Broad workflow changes should wait for a concrete pain point or a separate developer-workflow epic.                                                                         |
+| Safe ledger correction (edit / void)                              | Next priority; included                | [#39 / MARGIN-016](https://github.com/26pratyush/margin/issues/39) defines lifecycle semantics, followed by [#40 / MARGIN-017](https://github.com/26pratyush/margin/issues/40) for service, persistence, and backup behavior. |
+| Transaction history filters and period summaries                  | Included in EPIC-003                   | [#41 / MARGIN-018](https://github.com/26pratyush/margin/issues/41) adds read-only weekly/monthly review without changing global balances.                                                                                     |
+| Investment space with current value, profit/loss, and liquidation | Deferred — too early for this epic     | Requires a separate design for cost basis, manual or external valuation sources, realized versus unrealized performance, contributions, withdrawals, and liquidation. Track as a later investment epic.                       |
+| Optional expense name and category                                | Included in EPIC-003                   | [#42 / MARGIN-019](https://github.com/26pratyush/margin/issues/42) makes amount the only required field and defines an explicit uncategorized state without blank categories.                                                 |
+| Plan the first release after Epic completion                      | Complete                               | `v0.1.0` was published on 2026-08-26 from the validated local-first planning loop.                                                                                                                                            |
+| Tutorial with starting synthetic values                           | Included narrowly in EPIC-003          | [#43 / MARGIN-020](https://github.com/26pratyush/margin/issues/43) adds a small local guide and isolated synthetic mode; it must never overwrite or upload real local records.                                                |
+| Add a license                                                     | Complete                               | PolyForm Noncommercial License 1.0.0 is selected and present. Margin remains source-available with commercial use reserved.                                                                                                   |
+
+## EPIC-003 sequence
+
+1. Accept correction and metadata semantics in `MARGIN-016`.
+2. Implement safe correction and backup-compatible persistence in `MARGIN-017`.
+3. Add read-only transaction filters in `MARGIN-018`.
+4. Make expense metadata progressive in `MARGIN-019`.
+5. Add isolated first-use guidance and synthetic mode in `MARGIN-020`.
+6. Run the full regression and manual acceptance review in `MARGIN-021`.
+
+The epic deliberately excludes hosted finance data, bank integrations, recurring automation, investment advice, portfolio valuation, broad analytics, gamification, and developer-workflow improvements.

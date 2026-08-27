@@ -8,6 +8,10 @@ The project has been created for `26pratyush/margin`, and the initial Epic and c
 
 `v0.1.0` was released from validated `main` commit `269a1f3` on 2026-08-26. See the [GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0) and [live product website](https://26pratyush.github.io/margin/). Interactive browser review remains a documented follow-up; the next product slice is safe ledger correction and must be tracked separately.
 
+## Next planned epic
+
+[EPIC-003 / #38 — Everyday tracking, safe correction, and onboarding](https://github.com/26pratyush/margin/issues/38) is the next planned product body of work for v0.2. Its child issues are [#39](https://github.com/26pratyush/margin/issues/39) through [#44](https://github.com/26pratyush/margin/issues/44), sequenced from correction semantics and persistence through filters, progressive expense metadata, isolated synthetic onboarding, and final regression review. Investment valuation and developer-workflow improvements remain separate future work.
+
 ## Recommended fields
 
 | Field          | Values or purpose                                     |

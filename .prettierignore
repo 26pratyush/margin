@@ -3,6 +3,8 @@ app/dist/
 coverage/
 data/
 app/public/demo-data.json
+LICENSE
+LICENSE.md
 *.sqlite
 *.sqlite-*
 *.db
