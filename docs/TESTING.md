@@ -82,6 +82,16 @@ UI result: focused React/Testing Library coverage passed (22 app tests) and the 
 Pages result: the public GitHub Pages workflow completed successfully for the merged `main` commit and the site is available at [26pratyush.github.io/margin](https://26pratyush.github.io/margin/). No separate product defect issue was required by this run.
 Release gates: merge, Pages verification, the annotated `v0.1.0` tag, and the [GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0) are complete. Interactive browser review remains a documented follow-up. The repository license gate is complete: [PolyForm Noncommercial License 1.0.0](../LICENSE.md) is present.
 
+### MARGIN-017 correction-persistence review record
+
+Verification date: 2026-08-29
+Branch: `codex/MARGIN-017-safe-correction-persistence`
+Runtime: Node.js 26.5.0, npm 11.17.0, synthetic temporary data directories only
+Automated result: `npm run quality` passed with 64 service tests, 22 UI tests, TypeScript validation, and production build. Service coverage was 94.05% lines, 83.43% branches, and 97.11% functions.
+Correction result: dedicated correction and void commands passed field-matrix, active-only balance/planning, lineage, repeated-submit, stale-record, cross-target idempotency, commitment/refund dependency, reconciliation review, zero/negative balance, restart, and backup/restore coverage.
+Compatibility result: the v3 startup migration preserves existing IDs and financial fields, aligns legacy entry timestamps with SQLite row versions, and keeps flat v1 and envelope v2 JSON backups readable without changing the backup format.
+Privacy result: no real financial data, credentials, external API, or hosted persistence was introduced.
+
 ## Coverage policy
 
 The current service coverage floors are intentionally modest but regression-oriented:

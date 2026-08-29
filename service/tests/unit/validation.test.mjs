@@ -4,6 +4,9 @@ import {
   ValidationError,
   validatePlanningCycleInput,
   validatePlanningCyclePatch,
+  validateEntryCorrectionInput,
+  validateEntryCorrectionPatch,
+  validateEntryVoidInput,
   validateRecord,
   validateTransactionInput,
 } from '../../validation.mjs'
@@ -106,6 +109,90 @@ test('rejects invalid first-slice transaction commands', () => {
   assert.throws(
     () => validateTransactionInput({ type: 'income', amountMinor: 100, occurredOn: '2026-08-01', name: 'Salary' }),
     (error) => error instanceof ValidationError && error.details.includes('name is only supported for expenses'),
+  )
+})
+
+test('validates correction and void commands with explicit nullable patches', () => {
+  assert.deepEqual(
+    validateEntryCorrectionInput({
+      operationId: ' correction-1 ',
+      expectedUpdatedAt: '2026-08-20T10:00:00.000Z',
+      patch: { amountMinor: 80, name: '  Groceries  ', categoryId: null, note: null },
+    }),
+    {
+      operationId: 'correction-1',
+      expectedUpdatedAt: '2026-08-20T10:00:00.000Z',
+      patch: { amountMinor: 80, name: 'Groceries', categoryId: null, note: null },
+    },
+  )
+  assert.deepEqual(
+    validateEntryVoidInput({
+      operationId: ' void-1 ',
+      expectedUpdatedAt: '2026-08-20T10:00:00.000Z',
+      reason: '  Duplicate  ',
+    }),
+    {
+      operationId: 'void-1',
+      expectedUpdatedAt: '2026-08-20T10:00:00.000Z',
+      reason: 'Duplicate',
+    },
+  )
+})
+
+test('rejects unsafe correction fields and type-specific edits', () => {
+  assert.throws(
+    () =>
+      validateEntryCorrectionInput({
+        operationId: 'correction-1',
+        expectedUpdatedAt: '2026-08-20T10:00:00.000Z',
+        patch: { amountMinor: 0, type: 'expense' },
+      }),
+    (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('not writable')),
+  )
+  assert.throws(
+    () => validateEntryCorrectionPatch({ id: 'salary', type: 'income' }, { name: 'New name', categoryId: 'food' }),
+    (error) => error instanceof ValidationError && error.details.length === 2,
+  )
+  assert.throws(
+    () =>
+      validateEntryVoidInput({
+        operationId: 'void-1',
+        expectedUpdatedAt: '2026-08-20T10:00:00.000Z',
+        reason: 'duplicate',
+        status: 'voided',
+      }),
+    (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('not writable')),
+  )
+})
+
+test('validates replacement lineage and snapshot review state', () => {
+  const source = syntheticEntry({ id: 'source', status: 'voided', replacedById: 'replacement', operationId: 'op-1' })
+  const replacement = syntheticEntry({
+    id: 'replacement',
+    status: 'active',
+    replacesId: 'source',
+    operationId: 'op-1',
+    createdAt: '2026-08-20T10:00:00.000Z',
+    updatedAt: '2026-08-20T10:00:00.000Z',
+  })
+  const dataset = syntheticDataset({
+    entries: [source, replacement],
+    balanceSnapshots: [
+      {
+        id: 'snapshot',
+        asOf: '2026-08-31',
+        calculatedActualBalanceMinor: 100,
+        realBalanceMinor: 100,
+        differenceMinor: 0,
+        reviewState: 'needs-review',
+      },
+    ],
+  })
+  assert.equal(dataset.entries[1].replacesId, 'source')
+  assert.equal(dataset.balanceSnapshots[0].reviewState, 'needs-review')
+  assert.throws(
+    () => syntheticDataset({ entries: [source, { ...replacement, replacesId: 'missing' }] }),
+    (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('replacesId')),
   )
 })
 

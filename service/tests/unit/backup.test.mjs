@@ -40,7 +40,7 @@ test('accepts the legacy flat v1 backup shape', () => {
   assert.equal(decoded.summary.sourceFormatVersion, 1)
   assert.equal(decoded.dataset.entries.length, 2)
   assert.deepEqual(decoded.dataset.planningCycles, [])
-  assert.equal(decoded.dataset.schemaVersion, 2)
+  assert.equal(decoded.dataset.schemaVersion, 3)
   assert.equal(decoded.summary.warnings.length, 1)
 })
 

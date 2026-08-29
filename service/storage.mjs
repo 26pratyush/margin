@@ -3,8 +3,19 @@ import { randomUUID } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { createBackupEnvelope, decodeBackup, validateBackup as validateBackupDocument } from './backup.mjs'
+import {
+  canonicalJson,
+  createBackupEnvelope,
+  decodeBackup,
+  validateBackup as validateBackupDocument,
+} from './backup.mjs'
 import { calculateActualBalanceMinor } from './domain/calculations.mjs'
+import {
+  comparableOperationRecord,
+  CORRECTABLE_ENTRY_TYPES,
+  createReplacementEntry,
+  snapshotIsAffected,
+} from './domain/corrections.mjs'
 import { calculatePlanningCycleSummary, cycleBounds, localDateToday } from './domain/planning.mjs'
 import { calculateLedgerSummary } from './domain/summary.mjs'
 import {
@@ -16,6 +27,9 @@ import {
   validateDataset,
   validatePlanningCycleInput,
   validatePlanningCyclePatch,
+  validateEntryCorrectionInput,
+  validateEntryCorrectionPatch,
+  validateEntryVoidInput,
   validateRecord,
   validateTransactionInput,
   ValidationError,
@@ -42,6 +56,35 @@ const MIGRATIONS = [
   {
     version: 2,
     statements: [`ALTER TABLE records ADD COLUMN schema_version INTEGER NOT NULL DEFAULT 1`],
+  },
+  {
+    version: 3,
+    statements: [],
+    migrate(database) {
+      const rows = database
+        .prepare('SELECT collection, record_id, payload_json, updated_at FROM records WHERE collection = ?')
+        .all('entries')
+      const update = database.prepare(
+        'UPDATE records SET payload_json = ?, updated_at = ?, schema_version = ? WHERE collection = ? AND record_id = ?',
+      )
+      for (const row of rows) {
+        const entry = parseJson(row.payload_json, 'entries record')
+        const timestamp = entry.updatedAt ?? row.updated_at
+        const normalized = {
+          ...entry,
+          ...(entry.createdAt === undefined ? { createdAt: timestamp } : {}),
+          ...(entry.updatedAt === undefined ? { updatedAt: timestamp } : {}),
+        }
+        validateRecord('entries', normalized)
+        update.run(
+          JSON.stringify(normalized),
+          normalized.updatedAt,
+          recordSchemaVersion('entries'),
+          row.collection,
+          row.record_id,
+        )
+      }
+    },
   },
 ]
 
@@ -78,6 +121,12 @@ function now() {
   return new Date().toISOString()
 }
 
+function nextTimestamp(previousTimestamp) {
+  const candidate = now()
+  if (!previousTimestamp || candidate > previousTimestamp) return candidate
+  return new Date(Date.parse(previousTimestamp) + 1).toISOString()
+}
+
 function fileTimestamp() {
   return now().replace(/[.:]/g, '-')
 }
@@ -92,6 +141,14 @@ function parseJson(value, label) {
 
 function recordSchemaVersion(collection) {
   return collection === 'planningCycles' ? CURRENT_SCHEMA_VERSION : 1
+}
+
+function normalizeEntryTimestamps(entry, fallbackTimestamp = now()) {
+  return {
+    ...entry,
+    ...(entry.createdAt === undefined ? { createdAt: fallbackTimestamp } : {}),
+    ...(entry.updatedAt === undefined ? { updatedAt: fallbackTimestamp } : {}),
+  }
 }
 
 export class MarginStorage {
@@ -138,19 +195,48 @@ export class MarginStorage {
     return row ? parseJson(row.payload_json, `${collection} record`) : null
   }
 
+  getStoredRecord(collection, id) {
+    if (!collectionNames().includes(collection)) throw new Error(`Unknown collection: ${collection}`)
+    const row = this.database
+      .prepare('SELECT payload_json, updated_at FROM records WHERE collection = ? AND record_id = ?')
+      .get(collection, id)
+    if (!row) return null
+    const record = parseJson(row.payload_json, `${collection} record`)
+    return {
+      record,
+      rowUpdatedAt: row.updated_at,
+      updatedAt: record.updatedAt ?? row.updated_at,
+    }
+  }
+
   createRecord(collection, record) {
     validateRecord(collection, record)
     if (this.getRecord(collection, record.id))
       throw new ConflictError(`${collection} record ${record.id} already exists`)
+    const timestamp = now()
+    const persistedRecord = collection === 'entries' ? normalizeEntryTimestamps(record, timestamp) : record
+    validateRecord(collection, persistedRecord)
     this.database
       .prepare(
         'INSERT INTO records (collection, record_id, payload_json, updated_at, schema_version) VALUES (?, ?, ?, ?, ?)',
       )
-      .run(collection, record.id, JSON.stringify(record), now(), recordSchemaVersion(collection))
-    return record
+      .run(
+        collection,
+        persistedRecord.id,
+        JSON.stringify(persistedRecord),
+        persistedRecord.updatedAt ?? timestamp,
+        recordSchemaVersion(collection),
+      )
+    return persistedRecord
   }
 
   updateRecord(collection, id, record) {
+    if (collection === 'entries') {
+      throw new ConflictError(
+        'Posted entries must be changed through a dedicated correction or void command',
+        'ENTRY_MUTATION_REQUIRES_COMMAND',
+      )
+    }
     if (!record || typeof record !== 'object' || Array.isArray(record)) validateRecord(collection, record)
     if (record.id !== id) throw new Error('Record id in URL must match record id in body')
     const existing = this.getRecord(collection, id)
@@ -177,6 +263,12 @@ export class MarginStorage {
 
   deleteRecord(collection, id) {
     if (!collectionNames().includes(collection)) throw new Error(`Unknown collection: ${collection}`)
+    if (collection === 'entries') {
+      throw new ConflictError(
+        'Posted entries must be changed through a dedicated correction or void command',
+        'ENTRY_MUTATION_REQUIRES_COMMAND',
+      )
+    }
     const result = this.database
       .prepare('DELETE FROM records WHERE collection = ? AND record_id = ?')
       .run(collection, id)
@@ -325,12 +417,15 @@ export class MarginStorage {
         categoryId = category.id
       }
 
+      const timestamp = now()
       const entry = {
         id: randomUUID(),
         type: transaction.type,
         amountMinor: transaction.amountMinor,
         occurredOn: transaction.occurredOn,
         status: 'active',
+        createdAt: timestamp,
+        updatedAt: timestamp,
         ...(transaction.name ? { name: transaction.name } : {}),
         ...(categoryId ? { categoryId } : {}),
         ...(transaction.source ? { source: transaction.source } : {}),
@@ -339,6 +434,228 @@ export class MarginStorage {
       this.createRecord('entries', entry)
 
       return { entry, category, dataset: this.getDataset(), summary: this.getSummary() }
+    })
+  }
+
+  findOperationRecords(operationId) {
+    return this.getCollection('entries').filter((entry) => entry.operationId === operationId)
+  }
+
+  findCorrectionReplay(target, command) {
+    const operationRecords = this.findOperationRecords(command.operationId)
+    if (operationRecords.length === 0) return null
+
+    if (target.operationId === command.operationId && target.status === 'voided' && target.replacedById) {
+      const replacement = this.getRecord('entries', target.replacedById)
+      if (!replacement) {
+        throw new ConflictError(
+          `Correction replacement ${target.replacedById} is missing`,
+          'INVALID_REPLACEMENT_LINEAGE',
+        )
+      }
+      const expectedReplacement = createReplacementEntry(target, command.patch, {
+        id: replacement.id,
+        timestamp: replacement.createdAt ?? target.updatedAt,
+        operationId: command.operationId,
+      })
+      if (
+        canonicalJson(comparableOperationRecord(expectedReplacement)) !==
+        canonicalJson(comparableOperationRecord(replacement))
+      ) {
+        throw new ConflictError(
+          `operationId ${command.operationId} was already used with a different correction`,
+          'IDEMPOTENCY_CONFLICT',
+        )
+      }
+      return { original: target, replacement }
+    }
+
+    throw new ConflictError(
+      `operationId ${command.operationId} was already used for another operation`,
+      'IDEMPOTENCY_CONFLICT',
+    )
+  }
+
+  findVoidReplay(target, command) {
+    const operationRecords = this.findOperationRecords(command.operationId)
+    if (operationRecords.length === 0) return null
+
+    if (
+      target.operationId === command.operationId &&
+      target.status === 'voided' &&
+      target.replacedById === undefined &&
+      target.voidReason === command.reason
+    ) {
+      return { entry: target }
+    }
+
+    throw new ConflictError(
+      `operationId ${command.operationId} was already used for another operation`,
+      'IDEMPOTENCY_CONFLICT',
+    )
+  }
+
+  assertCorrectableEntry(entry) {
+    if (entry.status !== 'active') {
+      throw new ConflictError(`Entry ${entry.id} is terminal and cannot be changed`, 'TERMINAL_ENTRY')
+    }
+    if (!CORRECTABLE_ENTRY_TYPES.has(entry.type)) {
+      throw new ConflictError(`Entry type ${entry.type} does not support correction commands`, 'UNSUPPORTED_ENTRY_TYPE')
+    }
+  }
+
+  assertEntryVersion(storedEntry, expectedUpdatedAt) {
+    if (storedEntry.updatedAt !== expectedUpdatedAt) {
+      throw new ConflictError(`Entry ${storedEntry.record.id} is stale; reload it before retrying`, 'STALE_ENTRY')
+    }
+  }
+
+  assertNoActiveRefundDependents(entryId) {
+    const dependents = this.getCollection('entries').filter(
+      (entry) => entry.status === 'active' && entry.type === 'refund' && entry.refundOfId === entryId,
+    )
+    if (dependents.length > 0) {
+      throw new ConflictError(`Entry ${entryId} has active refund dependents`, 'DEPENDENCY_CONFLICT')
+    }
+  }
+
+  getLinkedCommitment(entry) {
+    if (!entry.commitmentId) return null
+    const commitment = this.getRecord('commitments', entry.commitmentId)
+    if (!commitment) {
+      throw new ConflictError(
+        `Entry ${entry.id} references missing commitment ${entry.commitmentId}`,
+        'DEPENDENCY_CONFLICT',
+      )
+    }
+    return commitment
+  }
+
+  updateCommitmentEntryLink(commitment, replacedEntryId, replacementEntryId) {
+    const linkedEntryIds = Array.isArray(commitment.linkedEntryIds) ? commitment.linkedEntryIds : []
+    const nextLinkedEntryIds = [
+      ...new Set([...linkedEntryIds.filter((entryId) => entryId !== replacedEntryId), replacementEntryId]),
+    ]
+    const nextCommitment = {
+      ...commitment,
+      linkedEntryIds: nextLinkedEntryIds,
+      updatedAt: nextTimestamp(commitment.updatedAt),
+    }
+    return this.updateRecord('commitments', commitment.id, nextCommitment)
+  }
+
+  markAffectedSnapshots(original, replacement = null) {
+    for (const snapshot of this.getCollection('balanceSnapshots')) {
+      const affected =
+        snapshotIsAffected(snapshot, original) || (replacement && snapshotIsAffected(snapshot, replacement))
+      if (!affected || snapshot.reviewState === 'needs-review') continue
+      this.updateRecord('balanceSnapshots', snapshot.id, { ...snapshot, reviewState: 'needs-review' })
+    }
+  }
+
+  updateStoredEntry(storedEntry, nextEntry) {
+    const result = this.database
+      .prepare(
+        'UPDATE records SET payload_json = ?, updated_at = ?, schema_version = ? WHERE collection = ? AND record_id = ? AND updated_at = ?',
+      )
+      .run(
+        JSON.stringify(nextEntry),
+        nextEntry.updatedAt,
+        recordSchemaVersion('entries'),
+        'entries',
+        nextEntry.id,
+        storedEntry.rowUpdatedAt,
+      )
+    if (result.changes !== 1) {
+      throw new ConflictError(`Entry ${nextEntry.id} is stale; reload it before retrying`, 'STALE_ENTRY')
+    }
+    return nextEntry
+  }
+
+  correctEntry(id, input) {
+    const command = validateEntryCorrectionInput(input)
+
+    return this.transaction(() => {
+      const storedEntry = this.getStoredRecord('entries', id)
+      if (!storedEntry) throw new NotFoundError(`entries record ${id} does not exist`)
+      const replay = this.findCorrectionReplay(storedEntry.record, command)
+      if (replay) {
+        return { ...replay, dataset: this.getDataset(), summary: this.getSummary() }
+      }
+
+      this.assertCorrectableEntry(storedEntry.record)
+      validateEntryCorrectionPatch(storedEntry.record, command.patch)
+      this.assertEntryVersion(storedEntry, command.expectedUpdatedAt)
+
+      if (command.patch.categoryId !== undefined && command.patch.categoryId !== null) {
+        if (!this.getRecord('categories', command.patch.categoryId)) {
+          throw new ValidationError('Invalid entry correction patch', [
+            'patch.categoryId does not reference an existing category',
+          ])
+        }
+      }
+      this.assertNoActiveRefundDependents(id)
+      const commitment = this.getLinkedCommitment(storedEntry.record)
+      const timestamp = nextTimestamp(storedEntry.updatedAt)
+      const replacement = createReplacementEntry(storedEntry.record, command.patch, {
+        id: randomUUID(),
+        timestamp,
+        operationId: command.operationId,
+      })
+      const voided = {
+        ...storedEntry.record,
+        status: 'voided',
+        updatedAt: timestamp,
+        voidedAt: timestamp,
+        operationId: command.operationId,
+        replacedById: replacement.id,
+      }
+      validateRecord('entries', voided)
+      validateRecord('entries', replacement)
+
+      this.updateStoredEntry(storedEntry, voided)
+      this.createRecord('entries', replacement)
+      if (commitment) this.updateCommitmentEntryLink(commitment, id, replacement.id)
+      this.markAffectedSnapshots(storedEntry.record, replacement)
+
+      return { original: voided, replacement, dataset: this.getDataset(), summary: this.getSummary() }
+    })
+  }
+
+  voidEntry(id, input) {
+    const command = validateEntryVoidInput(input)
+
+    return this.transaction(() => {
+      const storedEntry = this.getStoredRecord('entries', id)
+      if (!storedEntry) throw new NotFoundError(`entries record ${id} does not exist`)
+      const replay = this.findVoidReplay(storedEntry.record, command)
+      if (replay) return { ...replay, dataset: this.getDataset(), summary: this.getSummary() }
+
+      this.assertCorrectableEntry(storedEntry.record)
+      this.assertEntryVersion(storedEntry, command.expectedUpdatedAt)
+      this.assertNoActiveRefundDependents(id)
+      const commitment = this.getLinkedCommitment(storedEntry.record)
+      if (commitment) {
+        throw new ConflictError(
+          `Entry ${id} is linked to commitment ${commitment.id} and must be unlinked before voiding`,
+          'DEPENDENCY_CONFLICT',
+        )
+      }
+
+      const timestamp = nextTimestamp(storedEntry.updatedAt)
+      const voided = {
+        ...storedEntry.record,
+        status: 'voided',
+        updatedAt: timestamp,
+        voidedAt: timestamp,
+        voidReason: command.reason,
+        operationId: command.operationId,
+      }
+      validateRecord('entries', voided)
+      this.updateStoredEntry(storedEntry, voided)
+      this.markAffectedSnapshots(storedEntry.record)
+
+      return { entry: voided, dataset: this.getDataset(), summary: this.getSummary() }
     })
   }
 
@@ -394,7 +711,15 @@ export class MarginStorage {
       )
       for (const collection of collectionNames()) {
         for (const record of dataset[collection]) {
-          insert.run(collection, record.id, JSON.stringify(record), now(), recordSchemaVersion(collection))
+          const timestamp = now()
+          const persistedRecord = collection === 'entries' ? normalizeEntryTimestamps(record, timestamp) : record
+          insert.run(
+            collection,
+            persistedRecord.id,
+            JSON.stringify(persistedRecord),
+            persistedRecord.updatedAt ?? timestamp,
+            recordSchemaVersion(collection),
+          )
         }
       }
       return this.getDataset()
@@ -426,6 +751,7 @@ export async function openStorage({ dataDirectory } = {}) {
     database.exec('BEGIN IMMEDIATE')
     try {
       for (const statement of migration.statements) database.exec(statement)
+      if (migration.migrate) migration.migrate(database)
       database
         .prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
         .run(migration.version, now())

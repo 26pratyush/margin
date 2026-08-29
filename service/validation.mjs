@@ -1,7 +1,8 @@
 import { cycleBounds } from './domain/planning.mjs'
+import { CORRECTION_FIELDS } from './domain/corrections.mjs'
 
 const COLLECTIONS = ['entries', 'categories', 'commitments', 'balanceSnapshots', 'planningCycles']
-export const CURRENT_SCHEMA_VERSION = 2
+export const CURRENT_SCHEMA_VERSION = 3
 
 const ENTRY_TYPES = ['income', 'expense', 'investment', 'refund', 'adjustment']
 const ENTRY_STATUSES = ['active', 'voided']
@@ -18,10 +19,11 @@ export class ValidationError extends Error {
 }
 
 export class ConflictError extends Error {
-  constructor(message) {
+  constructor(message, code = 'CONFLICT', details = []) {
     super(message)
     this.name = 'ConflictError'
-    this.code = 'CONFLICT'
+    this.code = code
+    this.details = details
   }
 }
 
@@ -68,6 +70,12 @@ function assertId(record, collection, index, details) {
 
 function assertOptionalString(value, label, details) {
   if (value !== undefined && typeof value !== 'string') details.push(`${label} must be a string when provided`)
+}
+
+function assertOptionalNonEmptyString(value, label, details) {
+  if (value !== undefined && (typeof value !== 'string' || value.trim() === '')) {
+    details.push(`${label} must be a non-empty string when provided`)
+  }
 }
 
 function assertTimestamp(value, label, details) {
@@ -175,6 +183,84 @@ export function validateTransactionInput(value) {
   }
 }
 
+export function validateEntryCorrectionInput(value) {
+  if (!isRecord(value)) throw new ValidationError('Entry correction input must be an object')
+
+  const details = []
+  const patch = isRecord(value.patch) ? value.patch : {}
+  assertString(value.operationId, 'operationId', details)
+  assertTimestamp(value.expectedUpdatedAt, 'expectedUpdatedAt', details)
+  const allowedKeys = new Set(['operationId', 'expectedUpdatedAt', 'patch'])
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) details.push(`${key} is not writable for an entry correction command`)
+  }
+  if (!isRecord(value.patch)) {
+    details.push('patch must be an object')
+  } else {
+    if (Object.keys(patch).length === 0) details.push('patch must contain at least one writable field')
+    for (const [field, fieldValue] of Object.entries(patch)) {
+      if (!CORRECTION_FIELDS.has(field)) {
+        details.push(`patch.${field} is not writable`)
+        continue
+      }
+      if (field === 'amountMinor') assertInteger(fieldValue, 'patch.amountMinor', details, { min: 1 })
+      if (field === 'occurredOn') assertDate(fieldValue, 'patch.occurredOn', details)
+      if (['name', 'categoryId', 'source', 'note'].includes(field)) {
+        if (fieldValue !== null && (typeof fieldValue !== 'string' || fieldValue.trim() === '')) {
+          details.push(`patch.${field} must be a non-empty string or null`)
+        }
+      }
+    }
+  }
+
+  if (details.length > 0) throw new ValidationError('Invalid entry correction input', details)
+
+  return {
+    operationId: value.operationId.trim(),
+    expectedUpdatedAt: value.expectedUpdatedAt,
+    patch: Object.fromEntries(
+      Object.entries(patch).map(([field, fieldValue]) => [
+        field,
+        typeof fieldValue === 'string' ? fieldValue.trim() : fieldValue,
+      ]),
+    ),
+  }
+}
+
+export function validateEntryCorrectionPatch(entry, patch) {
+  if (!isRecord(entry)) throw new ValidationError('Entry must be an object')
+  const details = []
+  if (entry.type === 'income') {
+    if (patch.name !== undefined) details.push('patch.name is not supported for income entries')
+    if (patch.categoryId !== undefined) details.push('patch.categoryId is not supported for income entries')
+  }
+  if (entry.type === 'expense' && patch.source !== undefined) {
+    details.push('patch.source is not supported for expense entries')
+  }
+  if (details.length > 0) throw new ValidationError('Invalid entry correction patch', details)
+  return patch
+}
+
+export function validateEntryVoidInput(value) {
+  if (!isRecord(value)) throw new ValidationError('Entry void input must be an object')
+
+  const details = []
+  assertString(value.operationId, 'operationId', details)
+  assertTimestamp(value.expectedUpdatedAt, 'expectedUpdatedAt', details)
+  assertString(value.reason, 'reason', details)
+  const allowedKeys = new Set(['operationId', 'expectedUpdatedAt', 'reason'])
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) details.push(`${key} is not writable for an entry void command`)
+  }
+  if (details.length > 0) throw new ValidationError('Invalid entry void input', details)
+
+  return {
+    operationId: value.operationId.trim(),
+    expectedUpdatedAt: value.expectedUpdatedAt,
+    reason: value.reason.trim(),
+  }
+}
+
 export function validateRecord(collection, value, index = 0) {
   if (!COLLECTIONS.includes(collection)) {
     throw new ValidationError(`Unknown collection: ${collection}`)
@@ -192,6 +278,18 @@ export function validateRecord(collection, value, index = 0) {
     assertInteger(value.amountMinor, `${collection}[${index}].amountMinor`, details, { min: 1 })
     assertDate(value.occurredOn, `${collection}[${index}].occurredOn`, details)
     assertOptionalString(value.name, `${collection}[${index}].name`, details)
+    assertOptionalNonEmptyString(value.categoryId, `${collection}[${index}].categoryId`, details)
+    assertOptionalNonEmptyString(value.commitmentId, `${collection}[${index}].commitmentId`, details)
+    assertOptionalNonEmptyString(value.refundOfId, `${collection}[${index}].refundOfId`, details)
+    assertOptionalNonEmptyString(value.replacesId, `${collection}[${index}].replacesId`, details)
+    assertOptionalNonEmptyString(value.replacedById, `${collection}[${index}].replacedById`, details)
+    assertOptionalString(value.source, `${collection}[${index}].source`, details)
+    assertOptionalString(value.note, `${collection}[${index}].note`, details)
+    assertOptionalNonEmptyString(value.operationId, `${collection}[${index}].operationId`, details)
+    assertOptionalNonEmptyString(value.voidReason, `${collection}[${index}].voidReason`, details)
+    if (value.createdAt !== undefined) assertTimestamp(value.createdAt, `${collection}[${index}].createdAt`, details)
+    if (value.updatedAt !== undefined) assertTimestamp(value.updatedAt, `${collection}[${index}].updatedAt`, details)
+    if (value.voidedAt !== undefined) assertTimestamp(value.voidedAt, `${collection}[${index}].voidedAt`, details)
     if (!ENTRY_STATUSES.includes(value.status)) details.push(`${collection}[${index}].status is invalid`)
     if (value.type === 'adjustment' && !['credit', 'debit'].includes(value.direction)) {
       details.push(`${collection}[${index}].direction must be credit or debit for an adjustment`)
@@ -208,6 +306,13 @@ export function validateRecord(collection, value, index = 0) {
     assertInteger(value.plannedAmountMinor, `${collection}[${index}].plannedAmountMinor`, details, { min: 1 })
     assertDate(value.dueOn, `${collection}[${index}].dueOn`, details)
     if (!COMMITMENT_STATUSES.includes(value.status)) details.push(`${collection}[${index}].status is invalid`)
+    if (value.linkedEntryIds !== undefined) {
+      if (!Array.isArray(value.linkedEntryIds)) details.push(`${collection}[${index}].linkedEntryIds must be an array`)
+      else
+        value.linkedEntryIds.forEach((id, linkedIndex) =>
+          assertString(id, `${collection}[${index}].linkedEntryIds[${linkedIndex}]`, details),
+        )
+    }
   }
 
   if (collection === 'balanceSnapshots') {
@@ -217,6 +322,9 @@ export function validateRecord(collection, value, index = 0) {
     assertInteger(value.differenceMinor, `${collection}[${index}].differenceMinor`, details)
     if (value.adjustmentEntryId !== undefined)
       assertString(value.adjustmentEntryId, `${collection}[${index}].adjustmentEntryId`, details)
+    if (value.reviewState !== undefined && !['current', 'needs-review'].includes(value.reviewState)) {
+      details.push(`${collection}[${index}].reviewState is invalid`)
+    }
   }
 
   if (collection === 'planningCycles') {
@@ -290,6 +398,9 @@ export function validateDataset(value) {
   const categoryIds = new Set(categories.filter(isRecord).map((record) => record.id))
   const commitmentIds = new Set(commitments.filter(isRecord).map((record) => record.id))
   const entryIds = new Set(entries.filter(isRecord).map((record) => record.id))
+  const entryById = new Map(entries.filter(isRecord).map((record) => [record.id, record]))
+  const replacementReferences = new Map()
+  const operationRecords = new Map()
   entries.forEach((entry, index) => {
     if (!isRecord(entry)) return
     if (entry.categoryId !== undefined && !categoryIds.has(entry.categoryId))
@@ -300,6 +411,60 @@ export function validateDataset(value) {
       details.push(`entries[${index}].refundOfId does not reference an entry`)
     if (entry.replacesId !== undefined && !entryIds.has(entry.replacesId))
       details.push(`entries[${index}].replacesId does not reference an entry`)
+    if (entry.replacedById !== undefined && !entryIds.has(entry.replacedById))
+      details.push(`entries[${index}].replacedById does not reference an entry`)
+    if (entry.operationId) {
+      const records = operationRecords.get(entry.operationId) ?? []
+      records.push(entry)
+      operationRecords.set(entry.operationId, records)
+    }
+    if (entry.replacesId && entryIds.has(entry.replacesId)) {
+      const source = entryById.get(entry.replacesId)
+      if (source.type !== entry.type)
+        details.push(`entries[${index}].replacesId must reference an entry of the same type`)
+      if (source.status !== 'voided') details.push(`entries[${index}].replacesId must reference a voided entry`)
+      if (source.replacedById !== entry.id)
+        details.push(`entries[${index}].replacesId is not the source entry's replacement`)
+      replacementReferences.set(entry.replacesId, (replacementReferences.get(entry.replacesId) ?? 0) + 1)
+    }
+    if (entry.replacedById && entryIds.has(entry.replacedById)) {
+      const replacement = entryById.get(entry.replacedById)
+      if (replacement.type !== entry.type)
+        details.push(`entries[${index}].replacedById must reference an entry of the same type`)
+      if (replacement.replacesId !== entry.id)
+        details.push(`entries[${index}].replacedById is not the replacement's source entry`)
+    }
+  })
+  for (const [sourceId, referenceCount] of replacementReferences) {
+    if (referenceCount > 1) details.push(`entries contains multiple direct replacements for ${sourceId}`)
+  }
+  for (const entry of entries.filter(isRecord)) {
+    const visited = new Set()
+    let current = entry
+    while (current?.replacesId) {
+      if (visited.has(current.id)) {
+        details.push(`entries replacement lineage contains a cycle at ${entry.id}`)
+        break
+      }
+      visited.add(current.id)
+      current = entryById.get(current.replacesId)
+    }
+  }
+  for (const [operationId, records] of operationRecords) {
+    if (records.length > 2) details.push(`operationId ${operationId} is persisted on too many entries`)
+    if (records.length === 2) {
+      const [first, second] = records
+      const isPair =
+        (first.replacedById === second.id && second.replacesId === first.id) ||
+        (second.replacedById === first.id && first.replacesId === second.id)
+      if (!isPair) details.push(`operationId ${operationId} must identify one correction pair`)
+    }
+  }
+  commitments.forEach((commitment, index) => {
+    if (!Array.isArray(commitment.linkedEntryIds)) return
+    for (const entryId of commitment.linkedEntryIds) {
+      if (!entryIds.has(entryId)) details.push(`commitments[${index}].linkedEntryIds does not reference an entry`)
+    }
   })
   balanceSnapshots.forEach((snapshot, index) => {
     if (!isRecord(snapshot)) return
