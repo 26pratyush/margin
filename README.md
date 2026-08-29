@@ -133,6 +133,6 @@ Never commit real financial data, local database files, credentials, or producti
 
 ## License
 
-Margin is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE). It permits personal and other permitted noncommercial use, modification, and redistribution subject to the license terms. The license grants no commercial-use rights; commercial use requires separate written permission from the copyright holder unless another legal exception applies.
+Margin is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). It permits personal and other permitted noncommercial use, modification, and redistribution subject to the license terms. The license grants no commercial-use rights; commercial use requires separate written permission from the copyright holder unless another legal exception applies.
 
 This is intentionally not an OSI-approved open-source license: the Open Source Definition requires commercial use to be allowed. Third-party dependencies and assets remain under their own licenses.

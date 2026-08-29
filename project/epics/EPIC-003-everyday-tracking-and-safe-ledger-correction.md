@@ -11,7 +11,7 @@ Make Margin trustworthy and low-friction for everyday use after the v0.1.0 plann
 ### Included
 
 - Define and implement safe correction semantics for active salary and expense entries.
-- Preserve a correction-safe lifecycle: edits retain entry identity, voids preserve the original record, and hard deletion is not introduced.
+- Preserve a correction-safe lifecycle: corrections retain logical entry identity through linked history, voids preserve the original record, and hard deletion is not introduced.
 - Keep balance, planning, commitment, reconciliation, backup, and restore calculations derived from the corrected active ledger.
 - Add focused transaction-history filtering for supported periods with canonical local-date boundaries.
 - Make expense name and category progressive metadata, with an intentional uncategorized state.
@@ -61,7 +61,7 @@ Only `MARGIN-016` should establish correction, lifecycle, and optional-metadata 
 
 ## Idea triage
 
-The complete screenshot idea/status table is available in [Wiki-ready next work](../../wiki/Next-Work.md).
+The scope and deferred ideas below are the durable project record for this epic; the former Wiki-ready next-work page is no longer maintained.
 
 - Investment space with current value/profit-loss: deferred to a later epic because valuations, cost basis, realized versus unrealized performance, and liquidation semantics are not yet defined.
 - Optional expense name/category: included narrowly in `MARGIN-019`, with an explicit uncategorized state.

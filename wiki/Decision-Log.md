@@ -59,3 +59,7 @@ Margin is source-available under the PolyForm Noncommercial License 1.0.0. It pe
 ## D-012 — Post-v0.1 work prioritizes everyday trust
 
 After the v0.1.0 release, EPIC-003 prioritizes safe correction of ordinary salary and expense records, period-based history review, progressive expense metadata, and isolated synthetic onboarding. Investment portfolio valuation is deferred until Margin defines cost basis, current-value sources, realized versus unrealized performance, and liquidation semantics. Developer skills and broad Actions improvements remain a separate workflow epic.
+
+## D-013 — Corrections preserve ledger history
+
+Active salary and expense entries are corrected through an atomic void-and-replace command. The original record remains as a terminal voided fact, the replacement carries `replacesId`, and only the active replacement affects balances. Standalone void is also terminal and never hard-deletes or silently reactivates an entry. Commitment links, reconciliation review, duplicate/stale requests, and JSON restore behavior follow [ADR-004 — Ledger correction and entry lifecycle](../docs/decisions/ADR-004-ledger-correction-and-entry-lifecycle.md).
