@@ -102,7 +102,7 @@ At any point in a calendar month, the user should be able to answer:
 
 ## Open decisions
 
-- The detailed post-v0.1.0 execution plan is tracked in [EPIC-003 — Everyday tracking, safe ledger correction, and onboarding](../project/epics/EPIC-003-everyday-tracking-and-safe-ledger-correction.md); its correction lifecycle decision is owned by `MARGIN-016`.
+- The detailed post-v0.1.0 execution plan is tracked in [EPIC-003 — Everyday tracking, safe ledger correction, and onboarding](../project/epics/EPIC-003-everyday-tracking-and-safe-ledger-correction.md). Correction and entry-lifecycle semantics are accepted in [ADR-004](decisions/ADR-004-ledger-correction-and-entry-lifecycle.md) and are implemented by `MARGIN-017`.
 - Optional PWA installation or desktop packaging if browser constraints justify it.
 
 ## Working rule for future chats

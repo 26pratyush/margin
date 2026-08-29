@@ -89,7 +89,7 @@ The period summary includes commitments due inside the selected period. A separa
 
 Persisted financial facts are not silently deleted or overwritten.
 
-- A correction voids the original entry and creates a replacement with `replacesId`.
+- A correction voids the original entry and creates a replacement with `replacesId`. The complete supported-field, lifecycle, dependency, concurrency, and backup contract is recorded in [ADR-004 — Ledger correction and entry lifecycle](ADR-004-ledger-correction-and-entry-lifecycle.md).
 - Only active entries participate in calculations.
 - “Delete” for a posted entry means void with a reason; hard deletion is reserved for unsaved drafts.
 - A refund is a positive credit and may reference the original debit using `refundOfId`.

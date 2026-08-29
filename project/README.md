@@ -15,7 +15,7 @@ This directory contains versioned planning resources that support the GitHub Iss
 - [Stack decision](../docs/decisions/ADR-001-local-browser-stack.md)
 - [Domain model decision](../docs/decisions/ADR-002-domain-model-and-balance-rules.md)
 - [Monthly planning decision](../docs/decisions/ADR-003-monthly-planning-and-rollover.md)
-- [Wiki-ready next-work table](../wiki/Next-Work.md)
+- [Ledger correction and entry lifecycle decision](../docs/decisions/ADR-004-ledger-correction-and-entry-lifecycle.md)
 
 ## How to use these files
 

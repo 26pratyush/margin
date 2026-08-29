@@ -80,7 +80,7 @@ Automated result: `npm run quality` passed; the independent site gate (`format:c
 Synthetic flow result: create/read/update, actual-versus-reserved/disposable calculations, real `npm run dev` restart persistence, invalid input (`400`), duplicate planning-cycle input (`409`), versioned JSON validation, reset-to-empty, restore round-trip, negative disposable (`-₹11,250.00`), and zero-balance (`₹0.00`) states all passed. No real financial data was used.
 UI result: focused React/Testing Library coverage passed (22 app tests) and the independent site suite passed (3 tests). Interactive desktop/mobile/keyboard/focus/reduced-motion review could not be run because browser control was unavailable in this session; this remains a pre-publication follow-up, not a product behavior change.
 Pages result: the public GitHub Pages workflow completed successfully for the merged `main` commit and the site is available at [26pratyush.github.io/margin](https://26pratyush.github.io/margin/). No separate product defect issue was required by this run.
-Release gates: merge, Pages verification, the annotated `v0.1.0` tag, and the [GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0) are complete. Interactive browser review remains a documented follow-up. The repository license gate is complete: [PolyForm Noncommercial License 1.0.0](../LICENSE) is present.
+Release gates: merge, Pages verification, the annotated `v0.1.0` tag, and the [GitHub Release](https://github.com/26pratyush/margin/releases/tag/v0.1.0) are complete. Interactive browser review remains a documented follow-up. The repository license gate is complete: [PolyForm Noncommercial License 1.0.0](../LICENSE.md) is present.
 
 ## Coverage policy
 

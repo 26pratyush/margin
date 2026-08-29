@@ -25,6 +25,10 @@ Define the durable, user-visible rules for correcting an existing salary or expe
 - Past-cycle, linked-commitment, reconciliation, zero, negative, restored, and duplicate-submit examples are documented with expected outcomes.
 - The decision is recorded in a durable ADR or updated domain decision using synthetic examples only.
 
+## Accepted decision
+
+The contract is recorded in [ADR-004 — Ledger correction and entry lifecycle](../../docs/decisions/ADR-004-ledger-correction-and-entry-lifecycle.md). Corrections use an atomic void-and-replace flow with `replacesId`; standalone void is terminal; only active salary and expense entries are supported; commitment and refund dependencies, reconciliation review, optimistic concurrency, idempotency, and v2 JSON/SQLite compatibility are explicitly defined there.
+
 ## Dependencies and non-goals
 
 EPIC-002, ADR-002, ADR-003, and the local SQLite/JSON boundaries are prerequisites. Do not implement UI, investment valuation, recurring automation, or generic deletion semantics here.

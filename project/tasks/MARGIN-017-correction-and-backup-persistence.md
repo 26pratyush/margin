@@ -8,10 +8,12 @@
 
 Implement the accepted safe-correction contract at the domain, service, SQLite, and JSON backup boundaries.
 
+The normative contract is [ADR-004 — Ledger correction and entry lifecycle](../../docs/decisions/ADR-004-ledger-correction-and-entry-lifecycle.md); this task must implement it without redefining its semantics.
+
 ## Scope
 
 - Add dedicated correction and void commands for supported active salary and expense entries.
-- Preserve stable identity, status, correction history, timestamps, and links according to `MARGIN-016`.
+- Preserve stable logical identity through `replacesId`, status, correction history, timestamps, and links according to `MARGIN-016`.
 - Recalculate actual, planning, commitment, reconciliation, and disposable outputs from the resulting active ledger.
 - Extend migrations, backup validation, restore, and legacy compatibility only where required.
 - Return deterministic not-found, validation, conflict, and repeated-submit responses.

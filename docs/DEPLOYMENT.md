@@ -64,6 +64,6 @@ The first release sequence is:
 3. Merge the release-review Pull Request into `main` and confirm the Pages deployment publishes the current static site.
 4. Create the annotated `v0.1.0` tag and GitHub Release from that validated `main` commit.
 
-The finance app is not deployed as part of the Pages workflow. A release must not contain a local SQLite file, exported backup, credentials, or real financial data. The repository is source-available under the [PolyForm Noncommercial License 1.0.0](../LICENSE); the license grants no commercial-use rights, so commercial use requires separate written permission unless another legal exception applies.
+The finance app is not deployed as part of the Pages workflow. A release must not contain a local SQLite file, exported backup, credentials, or real financial data. The repository is source-available under the [PolyForm Noncommercial License 1.0.0](../LICENSE.md); the license grants no commercial-use rights, so commercial use requires separate written permission unless another legal exception applies.
 
 The product website can be published after a coherent set of screenshots and product explanations exists. The finance app does not need to be publicly reachable for the website to be useful.
