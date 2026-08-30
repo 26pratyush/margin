@@ -65,7 +65,15 @@ function requireBrowserMutation(request) {
 function errorResponse(error) {
   if (error instanceof ValidationError)
     return { statusCode: 400, body: { error: error.code, message: error.message, details: error.details } }
-  if (error instanceof ConflictError) return { statusCode: 409, body: { error: error.code, message: error.message } }
+  if (error instanceof ConflictError)
+    return {
+      statusCode: 409,
+      body: {
+        error: error.code,
+        message: error.message,
+        ...(error.details.length > 0 ? { details: error.details } : {}),
+      },
+    }
   if (error instanceof NotFoundError) return { statusCode: 404, body: { error: error.code, message: error.message } }
   if (error instanceof BackupError)
     return { statusCode: error.statusCode, body: { error: error.code, message: error.message, details: error.details } }
@@ -150,6 +158,16 @@ async function handleRequest(request, response, storage) {
     return
   }
 
+  if (method === 'POST' && route[0] === 'entries' && route.length === 3 && route[2] === 'correct') {
+    sendJson(response, 200, storage.correctEntry(route[1], await readBody(request)))
+    return
+  }
+
+  if (method === 'POST' && route[0] === 'entries' && route.length === 3 && route[2] === 'void') {
+    sendJson(response, 200, storage.voidEntry(route[1], await readBody(request)))
+    return
+  }
+
   if (route[0] === 'planning-cycles') {
     const cycleKey = route[1]
     if (method === 'GET' && !cycleKey) {
@@ -177,6 +195,12 @@ async function handleRequest(request, response, storage) {
   if (route[0] === 'collections' && collectionNames().includes(route[1])) {
     const collection = route[1]
     const id = route[2]
+    if (collection === 'entries' && ['PUT', 'DELETE'].includes(method)) {
+      throw new ConflictError(
+        'Posted entries must be changed through a dedicated correction or void command',
+        'ENTRY_MUTATION_REQUIRES_COMMAND',
+      )
+    }
     if (method === 'GET' && !id) {
       sendJson(response, 200, { collection, records: storage.getCollection(collection) })
       return

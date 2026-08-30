@@ -48,7 +48,7 @@ At any point in a calendar month, the user should be able to answer:
 
 ### Later roadmap work
 
-- Editing and deletion of ledger entries.
+- History filters and richer entry-history presentation; correction and void commands are implemented at the service boundary by MARGIN-017 and must remain the only posted-entry mutation path.
 - Weekly and custom-range summaries.
 - Recurring commitment automation.
 - Charts, trend views, and broad insights.

@@ -73,6 +73,135 @@ test('creates salary and expense records and exposes the updated summary', async
   }
 })
 
+test('exposes dedicated correction and void commands without generic entry mutation', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-correction-test-'))
+  const context = await startServer(directory)
+  try {
+    const created = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        type: 'expense',
+        amountMinor: 100000,
+        occurredOn: '2026-08-20',
+        name: 'Lunch',
+        categoryName: 'Food',
+      }),
+    }).then((response) => response.json())
+
+    const correctedResponse = await fetch(`${context.url}/api/entries/${created.entry.id}/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'http-correction-1',
+        expectedUpdatedAt: created.entry.updatedAt,
+        patch: { amountMinor: 80000, note: 'Corrected' },
+      }),
+    })
+    const corrected = await correctedResponse.json()
+    assert.equal(correctedResponse.status, 200)
+    assert.equal(corrected.original.status, 'voided')
+    assert.equal(corrected.replacement.amountMinor, 80000)
+    assert.equal(corrected.summary.expenseMinor, 80000)
+
+    const genericUpdate = await fetch(`${context.url}/api/collections/entries/${created.entry.id}`, {
+      method: 'PUT',
+      headers: clientHeaders(),
+      body: JSON.stringify(corrected.original),
+    })
+    const genericBody = await genericUpdate.json()
+    assert.equal(genericUpdate.status, 409)
+    assert.equal(genericBody.error, 'ENTRY_MUTATION_REQUIRES_COMMAND')
+
+    const voidedResponse = await fetch(`${context.url}/api/entries/${corrected.replacement.id}/void`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'http-void-1',
+        expectedUpdatedAt: corrected.replacement.updatedAt,
+        reason: 'Remove synthetic test entry',
+      }),
+    })
+    const voided = await voidedResponse.json()
+    assert.equal(voidedResponse.status, 200)
+    assert.equal(voided.entry.status, 'voided')
+    assert.equal(voided.summary.actualBalanceMinor, 0)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('returns deterministic command errors for missing, invalid, stale, and repeated requests', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-correction-errors-test-'))
+  const context = await startServer(directory)
+  try {
+    const missing = await fetch(`${context.url}/api/entries/missing/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'missing-1',
+        expectedUpdatedAt: '2026-08-20T10:00:00.000Z',
+        patch: { amountMinor: 10 },
+      }),
+    })
+    assert.equal(missing.status, 404)
+    assert.equal((await missing.json()).error, 'NOT_FOUND')
+
+    const created = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ type: 'income', amountMinor: 100, occurredOn: '2026-08-20' }),
+    }).then((response) => response.json())
+    const invalid = await fetch(`${context.url}/api/entries/${created.entry.id}/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'invalid-1',
+        expectedUpdatedAt: created.entry.updatedAt,
+        patch: { amountMinor: 0 },
+      }),
+    })
+    assert.equal(invalid.status, 400)
+    assert.equal((await invalid.json()).error, 'VALIDATION_ERROR')
+
+    const stale = await fetch(`${context.url}/api/entries/${created.entry.id}/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'stale-1',
+        expectedUpdatedAt: '2026-08-19T10:00:00.000Z',
+        patch: { amountMinor: 90 },
+      }),
+    })
+    assert.equal(stale.status, 409)
+    assert.equal((await stale.json()).error, 'STALE_ENTRY')
+
+    const corrected = await fetch(`${context.url}/api/entries/${created.entry.id}/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'repeat-1',
+        expectedUpdatedAt: created.entry.updatedAt,
+        patch: { amountMinor: 90 },
+      }),
+    }).then((response) => response.json())
+    const repeated = await fetch(`${context.url}/api/entries/${created.entry.id}/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'repeat-1',
+        expectedUpdatedAt: created.entry.updatedAt,
+        patch: { amountMinor: 90 },
+      }),
+    }).then((response) => response.json())
+    assert.equal(repeated.replacement.id, corrected.replacement.id)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('creates and updates a planning cycle through the service boundary', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-planning-test-'))
   const context = await startServer(directory)
