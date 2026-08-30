@@ -73,6 +73,108 @@ test('creates salary and expense records and exposes the updated summary', async
   }
 })
 
+test('projects filtered history, grouped sync events, and unchanged global summaries through the read boundary', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-history-test-'))
+  const context = await startServer(directory)
+  try {
+    const invalidRange = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-20&endOn=2026-08-20&type=all&status=active`,
+    )
+    const invalidRangeBody = await invalidRange.json()
+    assert.equal(invalidRange.status, 400)
+    assert.equal(invalidRangeBody.error, 'VALIDATION_ERROR')
+
+    await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ type: 'income', amountMinor: 100000, occurredOn: '2026-08-01', source: 'Salary' }),
+    })
+    const original = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        type: 'expense',
+        amountMinor: 1000,
+        occurredOn: '2026-08-02',
+        name: 'Original lunch',
+        categoryName: 'Food',
+      }),
+    }).then((response) => response.json())
+    await fetch(`${context.url}/api/entries/${original.entry.id}/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'history-correction-1',
+        expectedUpdatedAt: original.entry.updatedAt,
+        patch: { amountMinor: 800 },
+      }),
+    })
+
+    const before = await fetch(`${context.url}/api/summary`).then((response) => response.json())
+    const activeHistory = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-01&endOn=2026-08-03&type=all&status=active`,
+    ).then((response) => response.json())
+    assert.equal(activeHistory.items.length, 2)
+    assert.equal(activeHistory.summary.activeCount, 2)
+    assert.equal(activeHistory.summary.voidedCount, 0)
+    assert.equal(activeHistory.summary.creditsMinor, 100000)
+    assert.equal(activeHistory.summary.debitsMinor, 800)
+
+    const allHistory = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-02&endOn=2026-08-03&type=expense&status=all`,
+    ).then((response) => response.json())
+    assert.equal(allHistory.items.length, 2)
+    assert.equal(allHistory.summary.activeCount, 1)
+    assert.equal(allHistory.summary.voidedCount, 1)
+    assert.equal(allHistory.summary.debitsMinor, 800)
+
+    const reconciliation = await fetch(`${context.url}/api/reconcile`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ asOf: '2026-08-02', realBalanceMinor: 98000, note: 'Synthetic sync' }),
+    }).then((response) => response.json())
+    assert.equal(reconciliation.adjustment.direction, 'debit')
+    assert.equal(reconciliation.adjustment.amountMinor, 1200)
+
+    const syncHistory = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-02&endOn=2026-08-03&type=balance-sync&status=active`,
+    ).then((response) => response.json())
+    assert.equal(syncHistory.items.length, 1)
+    assert.equal(syncHistory.items[0].kind, 'balance-sync')
+    assert.equal(syncHistory.summary.debitsMinor, 1200)
+
+    const allWithSync = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-02&endOn=2026-08-03&type=all&status=active`,
+    ).then((response) => response.json())
+    assert.equal(allWithSync.items.filter((item) => item.kind === 'balance-sync').length, 1)
+    assert.equal(allWithSync.items.filter((item) => item.kind === 'entry').length, 1)
+
+    await fetch(`${context.url}/api/reconcile`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ asOf: '2026-08-03', realBalanceMinor: 98000 }),
+    })
+    const zeroSync = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-03&endOn=2026-08-04&type=balance-sync&status=active`,
+    ).then((response) => response.json())
+    assert.equal(zeroSync.items.length, 1)
+    assert.equal(zeroSync.items[0].adjustment, undefined)
+    assert.equal(zeroSync.summary.netMovementMinor, 0)
+
+    const after = await fetch(`${context.url}/api/summary`).then((response) => response.json())
+    assert.deepEqual(after, {
+      ...before,
+      actualBalanceMinor: 98000,
+      disposableBalanceMinor: 98000,
+      entryCount: before.entryCount + 1,
+      activeEntryCount: before.activeEntryCount + 1,
+    })
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('exposes dedicated correction and void commands without generic entry mutation', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-correction-test-'))
   const context = await startServer(directory)

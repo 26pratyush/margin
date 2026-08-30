@@ -16,6 +16,7 @@ import {
   createReplacementEntry,
   snapshotIsAffected,
 } from './domain/corrections.mjs'
+import { projectHistory } from './domain/history.mjs'
 import { calculatePlanningCycleSummary, cycleBounds, localDateToday } from './domain/planning.mjs'
 import { calculateLedgerSummary } from './domain/summary.mjs'
 import {
@@ -343,6 +344,19 @@ export class MarginStorage {
       entries: this.getCollection('entries'),
       commitments: this.getCollection('commitments'),
     })
+  }
+
+  getHistory(filters = {}) {
+    try {
+      return projectHistory({
+        ...filters,
+        entries: this.getCollection('entries'),
+        balanceSnapshots: this.getCollection('balanceSnapshots'),
+      })
+    } catch (error) {
+      if (error instanceof RangeError) throw new ValidationError('Invalid history filters', [error.message])
+      throw error
+    }
   }
 
   getPlanningCycles() {
