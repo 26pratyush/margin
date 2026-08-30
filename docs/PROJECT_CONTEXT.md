@@ -48,8 +48,7 @@ At any point in a calendar month, the user should be able to answer:
 
 ### Later roadmap work
 
-- History filters and richer entry-history presentation; correction and void commands are implemented at the service boundary by MARGIN-017 and must remain the only posted-entry mutation path.
-- Weekly and custom-range summaries.
+- History filters and richer entry-history presentation are implemented by MARGIN-018 as a read-only local projection; correction and void commands are implemented at the service boundary by MARGIN-017 and remain the only posted-entry mutation path.
 - Recurring commitment automation.
 - Charts, trend views, and broad insights.
 

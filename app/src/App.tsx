@@ -2,19 +2,22 @@ import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react'
 import { PlanningResponse, PlanningWorkspace, ReserveDraft } from './components/PlanningWorkspace'
 import { SalaryRepeatButton, SalaryRepeatDraft } from './components/SalaryRepeatButton'
 import { TransactionDraft, TransactionForm, TransactionKind } from './components/TransactionForm'
+import {
+  customRangeEndExclusive,
+  formatHistoryDay,
+  groupHistoryItems,
+  HistoryEntry,
+  HistoryItem,
+  HistoryPeriod,
+  HistoryQuery,
+  HistoryResponse,
+  HistoryStatus,
+  HistoryType,
+  validateCustomRange,
+} from './domain/history'
 import { todayCivilDate } from './domain/money'
 
-type Entry = {
-  id: string
-  type: string
-  amountMinor: number
-  occurredOn: string
-  status: string
-  name?: string
-  note?: string
-  source?: string
-  categoryId?: string
-}
+type Entry = HistoryEntry
 
 type Commitment = {
   id: string
@@ -35,7 +38,16 @@ type Dataset = {
   entries: Entry[]
   categories: Array<{ id: string; name: string }>
   commitments: Commitment[]
-  balanceSnapshots: Array<{ id: string; asOf: string; realBalanceMinor: number }>
+  balanceSnapshots: Array<{
+    id: string
+    asOf: string
+    calculatedActualBalanceMinor: number
+    realBalanceMinor: number
+    differenceMinor: number
+    adjustmentEntryId?: string
+    note?: string
+    reviewState?: 'current' | 'needs-review'
+  }>
 }
 
 type Summary = {
@@ -125,12 +137,23 @@ function shortDate(value: string) {
   return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' }).format(new Date(`${value}T00:00:00.000Z`))
 }
 
+function entryIsCredit(entry: Entry) {
+  return (
+    entry.type === 'income' || entry.type === 'refund' || (entry.type === 'adjustment' && entry.direction === 'credit')
+  )
+}
+
 function amountLabel(entry: Entry, currency: string) {
-  const positive = entry.type === 'income' || entry.type === 'refund'
+  const positive = entryIsCredit(entry)
   return `${positive ? '+' : '−'}${money(entry.amountMinor, currency)}`
 }
 
 function entryLabel(entry: Entry, categories: Dataset['categories'] = []) {
+  if (entry.type === 'adjustment') {
+    if (entry.adjustmentReason === 'reconciliation') return 'Balance sync'
+    if (entry.adjustmentReason === 'opening-balance') return 'Opening balance'
+    return 'Balance adjustment'
+  }
   if (entry.name) return entry.name
   if (entry.note) return entry.note
   if (entry.source) return entry.source
@@ -138,7 +161,9 @@ function entryLabel(entry: Entry, categories: Dataset['categories'] = []) {
   return entry.type.charAt(0).toUpperCase() + entry.type.slice(1)
 }
 
-export function latestSalary(entries: Entry[]) {
+export function latestSalary(
+  entries: Array<{ id: string; type: string; amountMinor: number; occurredOn: string; status: string }>,
+) {
   return [...entries]
     .filter((entry) => entry.status === 'active' && entry.type === 'income')
     .sort((left, right) => left.occurredOn.localeCompare(right.occurredOn) || left.id.localeCompare(right.id))
@@ -401,7 +426,7 @@ function ActivityRow({
   currency: string
   categories?: Dataset['categories']
 }) {
-  const positive = entry.type === 'income' || entry.type === 'refund'
+  const positive = entryIsCredit(entry)
   return (
     <div className="activity-row">
       <div className={`activity-icon ${positive ? 'activity-icon-teal' : ''}`}>
@@ -414,6 +439,311 @@ function ActivityRow({
         </span>
       </div>
       <strong className={positive ? 'amount-positive' : 'amount-negative'}>{amountLabel(entry, currency)}</strong>
+    </div>
+  )
+}
+
+const DEFAULT_HISTORY_FILTERS: HistoryQuery = { period: 'this-month', type: 'all', status: 'active' }
+const HISTORY_PERIOD_OPTIONS: Array<{ value: HistoryPeriod; label: string }> = [
+  { value: 'today', label: 'Today' },
+  { value: 'this-week', label: 'This week' },
+  { value: 'this-month', label: 'This month' },
+  { value: 'all', label: 'All time' },
+]
+const HISTORY_TYPE_OPTIONS: Array<{ value: HistoryType; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'income', label: 'Income' },
+  { value: 'expense', label: 'Expenses' },
+  { value: 'balance-sync', label: 'Balance sync' },
+]
+const HISTORY_STATUS_OPTIONS: Array<{ value: HistoryStatus; label: string }> = [
+  { value: 'active', label: 'Active' },
+  { value: 'voided', label: 'Voided' },
+  { value: 'all', label: 'All' },
+]
+
+function historyQueryPath(filters: HistoryQuery) {
+  const params = new URLSearchParams({ period: filters.period, type: filters.type, status: filters.status })
+  if (filters.period === 'custom') {
+    if (!filters.startOn || !filters.endOn) throw new Error('Choose a valid custom date range.')
+    params.set('startOn', filters.startOn)
+    params.set('endOn', filters.endOn)
+  }
+  return `/api/history?${params.toString()}`
+}
+
+function periodLabel(period: HistoryPeriod) {
+  if (period === 'this-week') return 'This week'
+  if (period === 'this-month') return 'This month'
+  if (period === 'today') return 'Today'
+  if (period === 'custom') return 'Custom range'
+  return 'All time'
+}
+
+function HistoryFilters({
+  filters,
+  customStartOn,
+  customEndOn,
+  customError,
+  onPeriodChange,
+  onTypeChange,
+  onStatusChange,
+  onCustomStartChange,
+  onCustomEndChange,
+  onApplyCustom,
+  onReset,
+}: {
+  filters: HistoryQuery
+  customStartOn: string
+  customEndOn: string
+  customError: string | null
+  onPeriodChange: (period: HistoryPeriod) => void
+  onTypeChange: (type: HistoryType) => void
+  onStatusChange: (status: HistoryStatus) => void
+  onCustomStartChange: (value: string) => void
+  onCustomEndChange: (value: string) => void
+  onApplyCustom: () => void
+  onReset: () => void
+}) {
+  return (
+    <section className="panel history-filters" aria-labelledby="history-filters-title">
+      <div className="history-filter-heading">
+        <div>
+          <p className="card-label">History filters</p>
+          <h2 id="history-filters-title">Find the useful slice.</h2>
+        </div>
+        <button type="button" className="button button-quiet" onClick={onReset}>
+          Reset filters
+        </button>
+      </div>
+      <div className="history-filter-groups">
+        <fieldset className="history-filter-group">
+          <legend>Period</legend>
+          <div className="filter-options" role="group" aria-label="History period">
+            {HISTORY_PERIOD_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`filter-option ${filters.period === option.value ? 'filter-option-active' : ''}`}
+                aria-pressed={filters.period === option.value}
+                onClick={() => onPeriodChange(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`filter-option ${filters.period === 'custom' ? 'filter-option-active' : ''}`}
+              aria-pressed={filters.period === 'custom'}
+              onClick={() => onPeriodChange('custom')}
+            >
+              Custom range
+            </button>
+          </div>
+        </fieldset>
+        <fieldset className="history-filter-group">
+          <legend>Type</legend>
+          <div className="filter-options" role="group" aria-label="History type">
+            {HISTORY_TYPE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`filter-option ${filters.type === option.value ? 'filter-option-active' : ''}`}
+                aria-pressed={filters.type === option.value}
+                onClick={() => onTypeChange(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset className="history-filter-group">
+          <legend>Status</legend>
+          <div className="filter-options" role="group" aria-label="History status">
+            {HISTORY_STATUS_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`filter-option ${filters.status === option.value ? 'filter-option-active' : ''}`}
+                aria-pressed={filters.status === option.value}
+                onClick={() => onStatusChange(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      </div>
+      {filters.period === 'custom' && (
+        <form
+          className="custom-range-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            onApplyCustom()
+          }}
+        >
+          <label className="field">
+            <span>From</span>
+            <input
+              aria-label="Custom range start"
+              type="date"
+              value={customStartOn}
+              onChange={(event) => onCustomStartChange(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>Through</span>
+            <input
+              aria-label="Custom range end"
+              type="date"
+              value={customEndOn}
+              onChange={(event) => onCustomEndChange(event.target.value)}
+            />
+          </label>
+          <button type="submit" className="button button-secondary">
+            Apply range
+          </button>
+          {customError && (
+            <p className="field-error custom-range-error" role="alert">
+              {customError}
+            </p>
+          )}
+        </form>
+      )}
+    </section>
+  )
+}
+
+function signedAmountLabel(amountMinor: number, currency: string) {
+  if (amountMinor === 0) return money(0, currency)
+  return `${amountMinor > 0 ? '+' : '−'}${money(Math.abs(amountMinor), currency)}`
+}
+
+function historyEntryStatusLabel(entry: Entry) {
+  if (entry.status === 'voided') {
+    return `Voided${entry.voidReason ? ` · ${entry.voidReason}` : ''}`
+  }
+  if (entry.replacesId) return 'Corrected replacement'
+  return entry.type === 'income' ? 'Income' : entry.type === 'expense' ? 'Expense' : 'Adjustment'
+}
+
+function HistoryEntryRow({
+  entry,
+  currency,
+  categories,
+}: {
+  entry: Entry
+  currency: string
+  categories: Dataset['categories']
+}) {
+  const positive = entryIsCredit(entry)
+  const voided = entry.status === 'voided'
+  return (
+    <div className={`activity-row history-entry-row ${voided ? 'history-entry-voided' : ''}`}>
+      <div className={`activity-icon ${positive ? 'activity-icon-teal' : ''}`}>
+        <Icon name={positive ? 'arrow' : 'transactions'} size={16} />
+      </div>
+      <div className="activity-copy">
+        <strong>{entryLabel(entry, categories)}</strong>
+        <span>{historyEntryStatusLabel(entry)}</span>
+        {entry.replacedById && <small>Replaced by a corrected entry</small>}
+      </div>
+      <strong className={positive ? 'amount-positive' : 'amount-negative'}>{amountLabel(entry, currency)}</strong>
+    </div>
+  )
+}
+
+function HistorySyncRow({
+  snapshot,
+  adjustment,
+  currency,
+}: {
+  snapshot: Extract<HistoryItem, { kind: 'balance-sync' }>['snapshot']
+  adjustment?: Entry
+  currency: string
+}) {
+  const signedAmountMinor = adjustment
+    ? entryIsCredit(adjustment)
+      ? adjustment.amountMinor
+      : -adjustment.amountMinor
+    : snapshot.differenceMinor
+  const amountClass =
+    signedAmountMinor > 0 ? 'amount-positive' : signedAmountMinor < 0 ? 'amount-negative' : 'amount-neutral'
+  const detail = adjustment ? 'Untracked balance adjustment' : 'No adjustment needed'
+  return (
+    <div className="activity-row history-entry-row history-sync-row">
+      <div className="activity-icon activity-icon-teal">
+        <Icon name="refresh" size={16} />
+      </div>
+      <div className="activity-copy">
+        <strong>Balance sync</strong>
+        <span>
+          {detail}
+          {snapshot.reviewState === 'needs-review' ? ' · Needs review' : ''}
+        </span>
+        {snapshot.note && <small>{snapshot.note}</small>}
+      </div>
+      <strong className={amountClass}>
+        {adjustment ? amountLabel(adjustment, currency) : signedAmountLabel(signedAmountMinor, currency)}
+      </strong>
+    </div>
+  )
+}
+
+function HistorySummary({
+  history,
+  summary,
+  currency,
+}: {
+  history: HistoryResponse
+  summary: Summary | null
+  currency: string
+}) {
+  return (
+    <div className="history-summary-layout">
+      <section className="panel history-summary" aria-labelledby="period-summary-title">
+        <div className="history-summary-heading">
+          <div>
+            <p className="card-label">Filtered period</p>
+            <h2 id="period-summary-title">{periodLabel(history.filters.period)} movement</h2>
+          </div>
+          <span className="panel-count">{history.summary.visibleCount}</span>
+        </div>
+        <div className="history-metrics">
+          <div>
+            <span>Active credits</span>
+            <strong className="amount-positive">{money(history.summary.creditsMinor, currency)}</strong>
+          </div>
+          <div>
+            <span>Active debits</span>
+            <strong className="amount-negative">{money(history.summary.debitsMinor, currency)}</strong>
+          </div>
+          <div>
+            <span>Net movement</span>
+            <strong className={history.summary.netMovementMinor >= 0 ? 'amount-positive' : 'amount-negative'}>
+              {signedAmountLabel(history.summary.netMovementMinor, currency)}
+            </strong>
+          </div>
+        </div>
+        <p className="history-summary-note">
+          {history.summary.activeCount} active · {history.summary.voidedCount} voided · {history.summary.syncCount} sync
+          {history.summary.syncCount === 1 ? '' : 's'}
+        </p>
+      </section>
+      <section className="panel history-global-summary" aria-label="Global balance summary">
+        <p className="card-label">Global balances</p>
+        <h2>Filters do not change your balance.</h2>
+        <div className="history-global-values">
+          <div>
+            <span>Actual balance</span>
+            <strong>{money(summary?.actualBalanceMinor ?? 0, currency)}</strong>
+          </div>
+          <div>
+            <span>Disposable</span>
+            <strong>{money(summary?.disposableBalanceMinor ?? 0, currency)}</strong>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
@@ -616,8 +946,9 @@ function HomeView({
   )
 }
 
-function TransactionsView({
+export function TransactionsView({
   dataset,
+  summary,
   onSeed,
   onNavigate,
   latestSalaryMinor,
@@ -626,6 +957,7 @@ function TransactionsView({
   onRefresh,
 }: {
   dataset: Dataset | null
+  summary: Summary | null
   onSeed: () => void
   onNavigate: (route: Route) => void
   latestSalaryMinor: number | null
@@ -635,6 +967,107 @@ function TransactionsView({
 }) {
   const entries = dataset?.entries ?? []
   const currency = dataset?.currency ?? 'INR'
+  const [filters, setFilters] = useState<HistoryQuery>(DEFAULT_HISTORY_FILTERS)
+  const currentDate = todayCivilDate()
+  const [customStartOn, setCustomStartOn] = useState(`${currentDate.slice(0, 7)}-01`)
+  const [customEndOn, setCustomEndOn] = useState(currentDate)
+  const [customError, setCustomError] = useState<string | null>(null)
+  const [history, setHistory] = useState<HistoryResponse | null>(null)
+  const [historyError, setHistoryError] = useState<string | null>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const historyCache = useRef(new Map<string, HistoryResponse>())
+  const historyRequestId = useRef(0)
+
+  useEffect(() => {
+    historyCache.current.clear()
+  }, [dataset?.exportedAt])
+
+  useEffect(() => {
+    const requestId = historyRequestId.current + 1
+    historyRequestId.current = requestId
+    if (filters.period === 'custom' && (!filters.startOn || !filters.endOn)) {
+      setHistoryLoading(false)
+      setHistoryError(null)
+      return
+    }
+
+    const cacheKey = JSON.stringify(filters)
+    const cached = historyCache.current.get(cacheKey)
+    if (cached) {
+      setHistory(cached)
+      setHistoryError(null)
+      setHistoryLoading(false)
+      return
+    }
+
+    setHistoryLoading(true)
+    setHistoryError(null)
+    request<HistoryResponse>(historyQueryPath(filters))
+      .then((nextHistory) => {
+        if (historyRequestId.current !== requestId) return
+        historyCache.current.set(cacheKey, nextHistory)
+        setHistory(nextHistory)
+      })
+      .catch((reason) => {
+        if (historyRequestId.current !== requestId) return
+        setHistoryError(reason instanceof Error ? reason.message : 'Unable to load transaction history.')
+      })
+      .finally(() => {
+        if (historyRequestId.current === requestId) setHistoryLoading(false)
+      })
+  }, [dataset?.exportedAt, filters, historyRefreshKey])
+
+  function selectPeriod(period: HistoryPeriod) {
+    setCustomError(null)
+    if (period === 'custom') {
+      const error = validateCustomRange(customStartOn, customEndOn)
+      if (error) {
+        setCustomError(error)
+        setFilters((current) => ({ ...current, period, startOn: undefined, endOn: undefined }))
+        return
+      }
+      setFilters((current) => ({
+        ...current,
+        period,
+        startOn: customStartOn,
+        endOn: customRangeEndExclusive(customEndOn),
+      }))
+      return
+    }
+    setFilters((current) => ({ ...current, period, startOn: undefined, endOn: undefined }))
+  }
+
+  function applyCustomRange() {
+    const error = validateCustomRange(customStartOn, customEndOn)
+    setCustomError(error)
+    if (error) return
+    setFilters((current) => ({
+      ...current,
+      period: 'custom',
+      startOn: customStartOn,
+      endOn: customRangeEndExclusive(customEndOn),
+    }))
+  }
+
+  function resetFilters() {
+    const resetDate = todayCivilDate()
+    setCustomStartOn(`${resetDate.slice(0, 7)}-01`)
+    setCustomEndOn(resetDate)
+    setCustomError(null)
+    setFilters(DEFAULT_HISTORY_FILTERS)
+  }
+
+  function refreshHistory() {
+    historyCache.current.clear()
+    setHistory(null)
+    setHistoryRefreshKey((current) => current + 1)
+    onRefresh()
+  }
+
+  const historyItems = history?.items ?? []
+  const historyGroups = groupHistoryItems(historyItems)
+  const hasHistory = entries.length > 0 || (dataset?.balanceSnapshots.length ?? 0) > 0
   return (
     <>
       <PageHeading
@@ -650,7 +1083,7 @@ function TransactionsView({
           />
         }
       />
-      {entries.length === 0 ? (
+      {!hasHistory ? (
         <section className="panel">
           <EmptyState
             icon="transactions"
@@ -672,22 +1105,84 @@ function TransactionsView({
           </div>
         </section>
       ) : (
-        <section className="panel table-panel">
-          <div className="table-toolbar">
-            <div>
-              <h2>All entries</h2>
-              <p>{entries.length} records in your local ledger</p>
+        <>
+          <HistoryFilters
+            filters={filters}
+            customStartOn={customStartOn}
+            customEndOn={customEndOn}
+            customError={customError}
+            onPeriodChange={selectPeriod}
+            onTypeChange={(type) => setFilters((current) => ({ ...current, type }))}
+            onStatusChange={(status) => setFilters((current) => ({ ...current, status }))}
+            onCustomStartChange={setCustomStartOn}
+            onCustomEndChange={setCustomEndOn}
+            onApplyCustom={applyCustomRange}
+            onReset={resetFilters}
+          />
+          {history && <HistorySummary history={history} summary={summary} currency={currency} />}
+          <section className="panel table-panel">
+            <div className="table-toolbar">
+              <div>
+                <h2>Filtered history</h2>
+                <p>
+                  {history
+                    ? `${history.summary.visibleCount} history ${history.summary.visibleCount === 1 ? 'item' : 'items'} · ${periodLabel(history.filters.period)}`
+                    : 'Loading your local history…'}
+                </p>
+              </div>
+              <Button variant="quiet" icon="refresh" onClick={refreshHistory}>
+                Refresh
+              </Button>
             </div>
-            <Button variant="quiet" icon="refresh" onClick={onRefresh}>
-              Refresh
-            </Button>
-          </div>
-          <div className="transaction-list">
-            {entries.map((entry) => (
-              <ActivityRow key={entry.id} entry={entry} currency={currency} categories={dataset?.categories} />
-            ))}
-          </div>
-        </section>
+            {historyLoading && !history ? (
+              <div className="history-loading" role="status">
+                <span className="status-dot status-dot-teal" />
+                Loading your local history…
+              </div>
+            ) : historyError ? (
+              <div className="history-error" role="alert">
+                <p>{historyError}</p>
+                <Button variant="quiet" onClick={refreshHistory}>
+                  Try again
+                </Button>
+              </div>
+            ) : history && history.items.length === 0 ? (
+              <EmptyState
+                icon="transactions"
+                eyebrow="No matching history"
+                title="Nothing fits these filters."
+                description="Try a wider period or include voided records to review more of your local history."
+                primaryLabel="Reset filters"
+                onPrimary={resetFilters}
+              />
+            ) : (
+              <div className="transaction-list history-list">
+                {historyGroups.map((group) => (
+                  <section className="history-day-group" key={group.date} aria-labelledby={`history-day-${group.date}`}>
+                    <h3 id={`history-day-${group.date}`}>{formatHistoryDay(group.date)}</h3>
+                    {group.items.map((item) =>
+                      item.kind === 'balance-sync' ? (
+                        <HistorySyncRow
+                          key={`sync-${item.snapshot.id}`}
+                          snapshot={item.snapshot}
+                          adjustment={item.adjustment}
+                          currency={currency}
+                        />
+                      ) : (
+                        <HistoryEntryRow
+                          key={item.entry.id}
+                          entry={item.entry}
+                          currency={currency}
+                          categories={dataset?.categories ?? []}
+                        />
+                      ),
+                    )}
+                  </section>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
     </>
   )
@@ -1179,6 +1674,7 @@ function App() {
           ) : route === 'transactions' ? (
             <TransactionsView
               dataset={dataset}
+              summary={summary}
               onSeed={() => void seedSyntheticData()}
               onNavigate={navigate}
               latestSalaryMinor={latestSalaryMinor}

@@ -92,6 +92,16 @@ Correction result: dedicated correction and void commands passed field-matrix, a
 Compatibility result: the v3 startup migration preserves existing IDs and financial fields, aligns legacy entry timestamps with SQLite row versions, and keeps flat v1 and envelope v2 JSON backups readable without changing the backup format.
 Privacy result: no real financial data, credentials, external API, or hosted persistence was introduced.
 
+### MARGIN-018 history-filter review record
+
+Verification date: 2026-08-30
+Branch: `codex/MARGIN-018-transaction-history-filters`
+Runtime: Node.js 26.5.0, npm 11.17.0, synthetic temporary data directories only
+Automated result: `npm run quality` passed with 69 service tests, 29 UI tests, TypeScript validation, and production build. Service coverage was 94.24% lines, 83.05% branches, and 97.55% functions.
+History result: local Monday-week, today/month/year rollover, leap-date, custom inclusive range, invalid-range, type/status filtering, voided correction lineage, balance-sync adjustments, zero-difference syncs, reconciliation review labels, deterministic ordering, and global-summary invariants passed.
+UI result: preset selection, custom range application and reset, keyboard-accessible filter controls, civil-day grouping, empty/loading/error states, active/voided presentation, sync presentation, and responsive layout coverage passed. Interactive browser control was unavailable in this session; the service and UI behavior is covered by deterministic synthetic tests.
+Privacy result: no real financial data, credentials, external API, hosted query service, persistence schema change, or backup format change was introduced.
+
 ## Coverage policy
 
 The current service coverage floors are intentionally modest but regression-oriented:

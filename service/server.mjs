@@ -121,6 +121,21 @@ async function handleRequest(request, response, storage) {
     return
   }
 
+  if (method === 'GET' && route[0] === 'history') {
+    sendJson(
+      response,
+      200,
+      storage.getHistory({
+        period: url.searchParams.get('period') ?? undefined,
+        type: url.searchParams.get('type') ?? undefined,
+        status: url.searchParams.get('status') ?? undefined,
+        startOn: url.searchParams.get('startOn') ?? undefined,
+        endOn: url.searchParams.get('endOn') ?? undefined,
+      }),
+    )
+    return
+  }
+
   if (method === 'GET' && route[0] === 'backup') {
     sendJson(response, 200, storage.exportBackup(), {
       'Content-Disposition': 'attachment; filename="margin-backup.json"',
