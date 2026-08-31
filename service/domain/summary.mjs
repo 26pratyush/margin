@@ -11,7 +11,10 @@ export function calculateLedgerSummary({ entries, commitments } = {}) {
     .filter((entry) => entry.type === 'income')
     .reduce((total, entry) => total + entry.amountMinor, 0)
   const expenseMinor = activeEntries
-    .filter((entry) => entry.type === 'expense')
+    .filter((entry) => entry.type === 'expense' && entry.direction !== 'credit')
+    .reduce((total, entry) => total + entry.amountMinor, 0)
+  const expenseCreditMinor = activeEntries
+    .filter((entry) => entry.type === 'expense' && entry.direction === 'credit')
     .reduce((total, entry) => total + entry.amountMinor, 0)
   const refundMinor = activeEntries
     .filter((entry) => entry.type === 'refund')
@@ -27,6 +30,7 @@ export function calculateLedgerSummary({ entries, commitments } = {}) {
   return {
     incomeMinor,
     expenseMinor,
+    expenseCreditMinor,
     refundMinor,
     investmentMinor,
     spendingMinor: expenseMinor + investmentMinor,

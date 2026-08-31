@@ -31,6 +31,7 @@ import {
   validateEntryCorrectionInput,
   validateEntryCorrectionPatch,
   validateEntryVoidInput,
+  validateReconciliationInput,
   validateRecord,
   validateTransactionInput,
   ValidationError,
@@ -419,7 +420,7 @@ export class MarginStorage {
     return this.transaction(() => {
       let category = null
       let categoryId
-      if (transaction.type === 'expense') {
+      if (transaction.type === 'expense' && transaction.categoryName) {
         const normalizedName = transaction.categoryName.toLocaleLowerCase()
         category = this.getCollection('categories').find(
           (candidate) => candidate.name.trim().toLocaleLowerCase() === normalizedName,
@@ -441,6 +442,7 @@ export class MarginStorage {
         createdAt: timestamp,
         updatedAt: timestamp,
         ...(transaction.name ? { name: transaction.name } : {}),
+        ...(transaction.type === 'expense' ? { direction: transaction.direction } : {}),
         ...(categoryId ? { categoryId } : {}),
         ...(transaction.source ? { source: transaction.source } : {}),
         ...(transaction.note ? { note: transaction.note } : {}),
@@ -673,17 +675,19 @@ export class MarginStorage {
     })
   }
 
-  reconcile({ asOf, realBalanceMinor, note } = {}) {
+  reconcile(input = {}) {
+    const reconciliation = validateReconciliationInput(input)
     const calculatedActualBalanceMinor = this.getActualBalance()
-    if (!Number.isSafeInteger(realBalanceMinor)) throw new ValidationError('realBalanceMinor must be an integer')
-    const differenceMinor = realBalanceMinor - calculatedActualBalanceMinor
+    const differenceMinor = reconciliation.realBalanceMinor - calculatedActualBalanceMinor
+    const timestamp = now()
     const snapshot = {
       id: randomUUID(),
-      asOf,
+      asOf: reconciliation.asOf,
+      createdAt: timestamp,
       calculatedActualBalanceMinor,
-      realBalanceMinor,
+      realBalanceMinor: reconciliation.realBalanceMinor,
       differenceMinor,
-      note,
+      ...(reconciliation.note ? { note: reconciliation.note } : {}),
     }
 
     return this.transaction(() => {
@@ -693,11 +697,11 @@ export class MarginStorage {
           id: randomUUID(),
           type: 'adjustment',
           amountMinor: Math.abs(differenceMinor),
-          occurredOn: asOf,
+          occurredOn: reconciliation.asOf,
           status: 'active',
           direction: differenceMinor > 0 ? 'credit' : 'debit',
           adjustmentReason: 'reconciliation',
-          note: note || 'Balance reconciliation adjustment',
+          note: reconciliation.note || 'Balance reconciliation adjustment',
         }
         this.createRecord('entries', adjustment)
         snapshot.adjustmentEntryId = adjustment.id

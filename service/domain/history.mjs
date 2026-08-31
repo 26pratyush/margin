@@ -99,7 +99,7 @@ function itemDate(item) {
 }
 
 function itemTimestamp(item) {
-  if (item.kind === 'balance-sync') return item.adjustment?.createdAt ?? item.snapshot.id
+  if (item.kind === 'balance-sync') return item.snapshot.createdAt ?? item.adjustment?.createdAt ?? item.snapshot.id
   return item.entry.createdAt ?? item.entry.updatedAt ?? item.entry.id
 }
 

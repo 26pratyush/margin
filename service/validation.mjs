@@ -5,6 +5,7 @@ const COLLECTIONS = ['entries', 'categories', 'commitments', 'balanceSnapshots',
 export const CURRENT_SCHEMA_VERSION = 3
 
 const ENTRY_TYPES = ['income', 'expense', 'investment', 'refund', 'adjustment']
+const ENTRY_DIRECTIONS = ['credit', 'debit']
 const ENTRY_STATUSES = ['active', 'voided']
 const COMMITMENT_KINDS = ['purchase', 'investment', 'bill', 'saving']
 const COMMITMENT_STATUSES = ['planned', 'partially-settled', 'settled', 'cancelled']
@@ -159,12 +160,15 @@ export function validateTransactionInput(value) {
   assertInteger(value.amountMinor, 'amountMinor', details, { min: 1 })
   assertDate(value.occurredOn, 'occurredOn', details)
   assertOptionalString(value.name, 'name', details)
+  assertOptionalString(value.categoryName, 'categoryName', details)
   assertOptionalString(value.source, 'source', details)
   assertOptionalString(value.note, 'note', details)
 
-  if (value.type === 'expense') {
-    assertString(value.name, 'name', details)
-    assertString(value.categoryName, 'categoryName', details)
+  if (value.type === 'expense' && value.direction !== undefined && !ENTRY_DIRECTIONS.includes(value.direction)) {
+    details.push('direction must be credit or debit for an expense')
+  }
+  if (value.type !== 'expense' && value.direction !== undefined) {
+    details.push('direction is only supported for expenses')
   }
   if (value.type === 'income' && value.name !== undefined) details.push('name is only supported for expenses')
   if (value.type === 'income' && value.categoryName !== undefined)
@@ -176,10 +180,32 @@ export function validateTransactionInput(value) {
     type: value.type,
     amountMinor: value.amountMinor,
     occurredOn: value.occurredOn,
-    name: value.name?.trim(),
-    categoryName: value.categoryName?.trim(),
-    source: value.source?.trim(),
-    note: value.note?.trim(),
+    ...(value.type === 'expense' ? { direction: value.direction ?? 'debit' } : {}),
+    name: value.name?.trim() || undefined,
+    categoryName: value.categoryName?.trim() || undefined,
+    source: value.source?.trim() || undefined,
+    note: value.note?.trim() || undefined,
+  }
+}
+
+export function validateReconciliationInput(value) {
+  if (!isRecord(value)) throw new ValidationError('Reconciliation input must be an object')
+
+  const details = []
+  assertDate(value.asOf, 'asOf', details)
+  assertInteger(value.realBalanceMinor, 'realBalanceMinor', details)
+  assertOptionalString(value.note, 'note', details)
+  const allowedKeys = new Set(['asOf', 'realBalanceMinor', 'note'])
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) details.push(`${key} is not writable for a reconciliation command`)
+  }
+
+  if (details.length > 0) throw new ValidationError('Invalid reconciliation input', details)
+
+  return {
+    asOf: value.asOf,
+    realBalanceMinor: value.realBalanceMinor,
+    ...(value.note?.trim() ? { note: value.note.trim() } : {}),
   }
 }
 
@@ -205,6 +231,9 @@ export function validateEntryCorrectionInput(value) {
       }
       if (field === 'amountMinor') assertInteger(fieldValue, 'patch.amountMinor', details, { min: 1 })
       if (field === 'occurredOn') assertDate(fieldValue, 'patch.occurredOn', details)
+      if (field === 'direction' && !ENTRY_DIRECTIONS.includes(fieldValue)) {
+        details.push('patch.direction must be credit or debit')
+      }
       if (['name', 'categoryId', 'source', 'note'].includes(field)) {
         if (fieldValue !== null && (typeof fieldValue !== 'string' || fieldValue.trim() === '')) {
           details.push(`patch.${field} must be a non-empty string or null`)
@@ -236,6 +265,9 @@ export function validateEntryCorrectionPatch(entry, patch) {
   }
   if (entry.type === 'expense' && patch.source !== undefined) {
     details.push('patch.source is not supported for expense entries')
+  }
+  if (entry.type !== 'expense' && patch.direction !== undefined) {
+    details.push('patch.direction is only supported for expense entries')
   }
   if (details.length > 0) throw new ValidationError('Invalid entry correction patch', details)
   return patch
@@ -285,6 +317,12 @@ export function validateRecord(collection, value, index = 0) {
     assertOptionalNonEmptyString(value.replacedById, `${collection}[${index}].replacedById`, details)
     assertOptionalString(value.source, `${collection}[${index}].source`, details)
     assertOptionalString(value.note, `${collection}[${index}].note`, details)
+    if (value.type === 'expense' && value.direction !== undefined && !ENTRY_DIRECTIONS.includes(value.direction)) {
+      details.push(`${collection}[${index}].direction must be credit or debit for an expense`)
+    }
+    if (value.type !== 'expense' && value.type !== 'adjustment' && value.direction !== undefined) {
+      details.push(`${collection}[${index}].direction is only supported for expenses and adjustments`)
+    }
     assertOptionalNonEmptyString(value.operationId, `${collection}[${index}].operationId`, details)
     assertOptionalNonEmptyString(value.voidReason, `${collection}[${index}].voidReason`, details)
     if (value.createdAt !== undefined) assertTimestamp(value.createdAt, `${collection}[${index}].createdAt`, details)
@@ -317,6 +355,7 @@ export function validateRecord(collection, value, index = 0) {
 
   if (collection === 'balanceSnapshots') {
     assertDate(value.asOf, `${collection}[${index}].asOf`, details)
+    if (value.createdAt !== undefined) assertTimestamp(value.createdAt, `${collection}[${index}].createdAt`, details)
     assertInteger(value.calculatedActualBalanceMinor, `${collection}[${index}].calculatedActualBalanceMinor`, details)
     assertInteger(value.realBalanceMinor, `${collection}[${index}].realBalanceMinor`, details)
     assertInteger(value.differenceMinor, `${collection}[${index}].differenceMinor`, details)

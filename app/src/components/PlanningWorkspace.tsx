@@ -1,5 +1,5 @@
 import { FormEvent, ReactNode, useState } from 'react'
-import { isValidCivilDate, parseAmountToMinor } from '../domain/money'
+import { isValidCivilDate, lastDayOfMonth, parseAmountToMinor } from '../domain/money'
 
 export type PlanningCycle = {
   id: string
@@ -165,6 +165,7 @@ function LockerCard({
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const reserveDueOn = lastDayOfMonth(cycle.startOn)
 
   function toggleOpen() {
     setOpen((current) => !current)
@@ -188,7 +189,7 @@ function LockerCard({
     setError(null)
     setSubmitting(true)
     try {
-      await onReserve({ name: name.trim(), amountMinor: amountMinor as number, dueOn: cycle.startOn })
+      await onReserve({ name: name.trim(), amountMinor: amountMinor as number, dueOn: reserveDueOn })
       setAmount('')
       setName('')
       setShowReserve(false)
@@ -253,7 +254,7 @@ function LockerCard({
             <div className="locker-form-heading">
               <div>
                 <strong>Make a plan for this cycle</strong>
-                <span>It will be due on {dateLabel(cycle.startOn)}.</span>
+                <span>It will be due on {dateLabel(reserveDueOn)}.</span>
               </div>
               <button
                 type="button"

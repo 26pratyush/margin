@@ -1,6 +1,14 @@
 export const CORRECTABLE_ENTRY_TYPES = new Set(['income', 'expense'])
 
-export const CORRECTION_FIELDS = new Set(['amountMinor', 'occurredOn', 'name', 'categoryId', 'source', 'note'])
+export const CORRECTION_FIELDS = new Set([
+  'amountMinor',
+  'occurredOn',
+  'name',
+  'categoryId',
+  'source',
+  'note',
+  'direction',
+])
 
 const LIFECYCLE_FIELDS = new Set([
   'id',
