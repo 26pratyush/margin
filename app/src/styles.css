@@ -868,6 +868,24 @@ a {
   border-radius: 10px;
   background: var(--color-surface-raised);
 }
+.transaction-direction {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.transaction-direction-label {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.transaction-direction-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  width: min(100%, 430px);
+  margin-top: 0;
+}
 .kind-button {
   min-height: 34px;
   padding: 7px 14px;
@@ -996,6 +1014,47 @@ a {
   justify-content: end;
   gap: 8px;
   margin-top: 20px;
+}
+
+.balance-sync-card {
+  margin-bottom: 14px;
+  border-color: rgba(129, 201, 208, 0.24);
+  background: linear-gradient(135deg, rgba(129, 201, 208, 0.045), transparent 52%), var(--color-surface);
+}
+.balance-sync-card .panel-heading > div:first-child {
+  min-width: 0;
+}
+.balance-sync-card .panel-heading p:not(.card-label) {
+  max-width: 630px;
+  line-height: 1.55;
+}
+.balance-sync-current {
+  display: grid;
+  gap: 5px;
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: rgba(17, 20, 19, 0.25);
+}
+.balance-sync-current span,
+.balance-sync-current small {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+}
+.balance-sync-current strong {
+  color: var(--color-accent);
+  font-size: 1.1rem;
+  font-weight: 620;
+}
+.balance-sync-current small {
+  line-height: 1.4;
+}
+.balance-sync-form {
+  margin-top: 18px;
+}
+.balance-sync-form .form-actions {
+  margin-top: 16px;
 }
 
 .table-panel {

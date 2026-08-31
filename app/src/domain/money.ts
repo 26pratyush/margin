@@ -1,14 +1,26 @@
 export function parseAmountToMinor(value: string): number | null {
-  const normalized = value.trim().replaceAll(',', '')
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null
+  const amountMinor = parseSignedAmountToMinor(value)
+  return amountMinor === null || amountMinor < 1 ? null : amountMinor
+}
 
-  const [wholePart, fractionPart = ''] = normalized.split('.')
+export function parseSignedAmountToMinor(value: string): number | null {
+  const normalized = value.trim().replaceAll(',', '')
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(normalized)) return null
+
+  const sign = normalized.startsWith('-') ? -1 : 1
+  const unsigned = normalized.replace(/^-/, '')
+  const [wholePart, fractionPart = ''] = unsigned.split('.')
   const wholeMinor = Number(wholePart) * 100
   const fractionMinor = Number(fractionPart.padEnd(2, '0'))
-  const amountMinor = wholeMinor + fractionMinor
+  const amountMinor = sign * (wholeMinor + fractionMinor)
 
-  if (!Number.isSafeInteger(amountMinor) || amountMinor < 1) return null
-  return amountMinor
+  return Number.isSafeInteger(amountMinor) ? amountMinor : null
+}
+
+export function lastDayOfMonth(value: string): string {
+  if (!isValidCivilDate(value)) throw new RangeError('date must be a real calendar date')
+  const [year, month] = value.split('-').map(Number)
+  return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
 }
 
 export function isValidCivilDate(value: string): boolean {

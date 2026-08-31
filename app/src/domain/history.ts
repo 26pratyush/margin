@@ -30,6 +30,7 @@ export type HistoryEntry = {
 export type HistorySnapshot = {
   id: string
   asOf: string
+  createdAt?: string
   calculatedActualBalanceMinor: number
   realBalanceMinor: number
   differenceMinor: number

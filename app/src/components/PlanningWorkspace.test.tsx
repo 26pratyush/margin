@@ -65,6 +65,7 @@ describe('PlanningWorkspace', () => {
     expect(within(locker).getByText('Reserved is not spent')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Reserve money for August 2026' }))
+    expect(screen.getByText('It will be due on 31 Aug 2026.')).toBeInTheDocument()
     await user.type(screen.getByRole('textbox', { name: 'Reserve amount' }), '30000')
     await user.type(screen.getByRole('textbox', { name: 'Reserve purpose' }), 'Emergency fund')
     await user.click(screen.getByRole('button', { name: 'Save planned reserve' }))
@@ -73,7 +74,7 @@ describe('PlanningWorkspace', () => {
       expect(onReserve).toHaveBeenCalledWith({
         name: 'Emergency fund',
         amountMinor: 3000000,
-        dueOn: '2026-08-01',
+        dueOn: '2026-08-31',
       })
     })
     expect(screen.getByText(/overall actual balance stays/i)).toHaveTextContent('₹1,37,500.00')

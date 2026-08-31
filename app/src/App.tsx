@@ -1,4 +1,5 @@
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react'
+import { BalanceSyncDraft, BalanceSyncForm, BalanceSyncSnapshot } from './components/BalanceSyncForm'
 import { PlanningResponse, PlanningWorkspace, ReserveDraft } from './components/PlanningWorkspace'
 import { SalaryRepeatButton, SalaryRepeatDraft } from './components/SalaryRepeatButton'
 import { TransactionDraft, TransactionForm, TransactionKind } from './components/TransactionForm'
@@ -41,6 +42,7 @@ type Dataset = {
   balanceSnapshots: Array<{
     id: string
     asOf: string
+    createdAt?: string
     calculatedActualBalanceMinor: number
     realBalanceMinor: number
     differenceMinor: number
@@ -53,6 +55,7 @@ type Dataset = {
 type Summary = {
   incomeMinor: number
   expenseMinor: number
+  expenseCreditMinor: number
   refundMinor: number
   investmentMinor: number
   spendingMinor: number
@@ -139,13 +142,25 @@ function shortDate(value: string) {
 
 function entryIsCredit(entry: Entry) {
   return (
-    entry.type === 'income' || entry.type === 'refund' || (entry.type === 'adjustment' && entry.direction === 'credit')
+    entry.type === 'income' ||
+    entry.type === 'refund' ||
+    (entry.type === 'expense' && entry.direction === 'credit') ||
+    (entry.type === 'adjustment' && entry.direction === 'credit')
   )
 }
 
 function amountLabel(entry: Entry, currency: string) {
   const positive = entryIsCredit(entry)
   return `${positive ? '+' : '−'}${money(entry.amountMinor, currency)}`
+}
+
+const UNCATEGORIZED_LABEL = 'Uncategorized'
+const UNNAMED_EXPENSE_LABEL = 'Uncategorized expense'
+
+function entryCategoryLabel(entry: Entry, categories: Dataset['categories'] = []) {
+  if (entry.type !== 'expense') return null
+  if (!entry.categoryId) return UNCATEGORIZED_LABEL
+  return categories.find((category) => category.id === entry.categoryId)?.name ?? UNCATEGORIZED_LABEL
 }
 
 function entryLabel(entry: Entry, categories: Dataset['categories'] = []) {
@@ -157,7 +172,9 @@ function entryLabel(entry: Entry, categories: Dataset['categories'] = []) {
   if (entry.name) return entry.name
   if (entry.note) return entry.note
   if (entry.source) return entry.source
-  if (entry.categoryId) return categories.find((category) => category.id === entry.categoryId)?.name ?? 'Expense'
+  if (entry.categoryId)
+    return categories.find((category) => category.id === entry.categoryId)?.name ?? UNNAMED_EXPENSE_LABEL
+  if (entry.type === 'expense') return UNNAMED_EXPENSE_LABEL
   return entry.type.charAt(0).toUpperCase() + entry.type.slice(1)
 }
 
@@ -167,6 +184,15 @@ export function latestSalary(
   return [...entries]
     .filter((entry) => entry.status === 'active' && entry.type === 'income')
     .sort((left, right) => left.occurredOn.localeCompare(right.occurredOn) || left.id.localeCompare(right.id))
+    .at(-1)
+}
+
+function latestBalanceSnapshot(snapshots: Dataset['balanceSnapshots']): BalanceSyncSnapshot | undefined {
+  return [...snapshots]
+    .sort(
+      (left, right) =>
+        (left.createdAt ?? left.asOf).localeCompare(right.createdAt ?? right.asOf) || left.id.localeCompare(right.id),
+    )
     .at(-1)
 }
 
@@ -624,7 +650,9 @@ function historyEntryStatusLabel(entry: Entry) {
     return `Voided${entry.voidReason ? ` · ${entry.voidReason}` : ''}`
   }
   if (entry.replacesId) return 'Corrected replacement'
-  return entry.type === 'income' ? 'Income' : entry.type === 'expense' ? 'Expense' : 'Adjustment'
+  if (entry.type === 'income') return 'Income'
+  if (entry.type === 'expense') return entry.direction === 'credit' ? 'Expense credit' : 'Expense debit'
+  return 'Adjustment'
 }
 
 function HistoryEntryRow({
@@ -646,6 +674,7 @@ function HistoryEntryRow({
       <div className="activity-copy">
         <strong>{entryLabel(entry, categories)}</strong>
         <span>{historyEntryStatusLabel(entry)}</span>
+        {entry.type === 'expense' && <small>Category: {entryCategoryLabel(entry, categories)}</small>}
         {entry.replacedById && <small>Replaced by a corrected entry</small>}
       </div>
       <strong className={positive ? 'amount-positive' : 'amount-negative'}>{amountLabel(entry, currency)}</strong>
@@ -774,20 +803,24 @@ function HomeView({
   dataset,
   summary,
   health,
+  latestSnapshot,
   onSeed,
   onNavigate,
   latestSalaryMinor,
   onRepeatSalary,
   onOpenForm,
+  onSyncBalance,
 }: {
   dataset: Dataset | null
   summary: Summary | null
   health: Health | null
+  latestSnapshot?: BalanceSyncSnapshot
   onSeed: () => void
   onNavigate: (route: Route) => void
   latestSalaryMinor: number | null
   onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
   onOpenForm: (type?: TransactionKind) => void
+  onSyncBalance: (draft: BalanceSyncDraft) => Promise<void>
 }) {
   const entries = dataset?.entries ?? []
   const commitments = dataset?.commitments ?? []
@@ -815,6 +848,12 @@ function HomeView({
         {health ? 'Local workspace connected' : 'Connecting to local workspace'}
         <span className="status-separator">·</span>Data stays on this device
       </div>
+      <BalanceSyncForm
+        actualBalanceMinor={actualBalance}
+        currency={currency}
+        latestSnapshot={latestSnapshot}
+        onSync={onSyncBalance}
+      />
       {!hasData ? (
         <section className="panel panel-empty-home">
           <EmptyState
@@ -1450,9 +1489,35 @@ function App() {
     setTransactionForm(null)
     setNotice({
       tone: 'success',
-      text: draft.type === 'income' ? 'Salary added to your local ledger.' : 'Expense added to your local ledger.',
+      text:
+        draft.type === 'income'
+          ? 'Salary added to your local ledger.'
+          : draft.direction === 'credit'
+            ? 'Expense credit added to your local ledger.'
+            : 'Expense added to your local ledger.',
     })
     await refresh()
+  }
+
+  async function syncBalance(draft: BalanceSyncDraft) {
+    try {
+      const result = await request<{ adjustment: Entry | null }>('/api/reconcile', {
+        method: 'POST',
+        body: JSON.stringify(draft),
+      })
+      setNotice({
+        tone: 'success',
+        text:
+          result.adjustment === null
+            ? 'Balance checked. No adjustment was needed.'
+            : `${result.adjustment.direction === 'credit' ? 'Credit' : 'Debit'} adjustment added; your actual balance is now synced.`,
+      })
+      await refresh()
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Unable to sync the real balance.'
+      setNotice({ tone: 'error', text: message })
+      throw new Error(message, { cause: reason })
+    }
   }
 
   async function repeatSalary(draft: SalaryRepeatDraft) {
@@ -1578,6 +1643,7 @@ function App() {
 
   const activeNavigation = navigation.find((item) => item.key === route) ?? navigation[0]
   const latestSalaryMinor = latestSalary(dataset?.entries ?? [])?.amountMinor ?? null
+  const latestSnapshot = latestBalanceSnapshot(dataset?.balanceSnapshots ?? [])
 
   return (
     <div className="app-shell">
@@ -1665,11 +1731,13 @@ function App() {
               dataset={dataset}
               summary={summary}
               health={health}
+              latestSnapshot={latestSnapshot}
               onSeed={() => void seedSyntheticData()}
               onNavigate={navigate}
               latestSalaryMinor={latestSalaryMinor}
               onRepeatSalary={repeatSalary}
               onOpenForm={openTransactionForm}
+              onSyncBalance={syncBalance}
             />
           ) : route === 'transactions' ? (
             <TransactionsView

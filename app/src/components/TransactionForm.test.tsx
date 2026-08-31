@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_CATEGORY_OPTIONS, TransactionForm } from './TransactionForm'
 
 describe('TransactionForm', () => {
-  it('opens with expense selected and requires amount, name, and category', async () => {
+  it('opens with expense selected and keeps amount required while metadata stays optional', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(<TransactionForm defaultType="expense" onSubmit={onSubmit} onClose={vi.fn()} />)
@@ -14,9 +14,26 @@ describe('TransactionForm', () => {
     await user.click(screen.getByRole('button', { name: 'Save expense' }))
 
     expect(screen.getByText(/amount greater than/i)).toBeInTheDocument()
-    expect(screen.getByText(/name for this expense/i)).toBeInTheDocument()
-    expect(screen.getByText(/choose or create a category/i)).toBeInTheDocument()
+    expect(screen.queryByText(/name for this expense/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/choose or create a category/i)).not.toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('saves an amount-only expense without sending blank metadata', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(<TransactionForm defaultType="expense" onSubmit={onSubmit} onClose={vi.fn()} />)
+
+    expect(screen.getAllByText('Optional')).toHaveLength(3)
+    expect(screen.getByRole('option', { name: 'Uncategorized' })).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Amount'), '24')
+    await user.click(screen.getByRole('button', { name: 'Save expense' }))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ type: 'expense', amountMinor: 2400 }))
+    expect(onSubmit.mock.calls[0][0]).toHaveProperty('direction', 'debit')
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('name')
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('categoryName')
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('note')
   })
 
   it('offers common categories before any user category has been saved', () => {
@@ -86,6 +103,27 @@ describe('TransactionForm', () => {
     await user.click(screen.getByRole('button', { name: 'Save expense' }))
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Coffee', categoryName: 'Food' }))
+  })
+
+  it('allows a non-salary inbound expense credit while keeping debit as the default', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(<TransactionForm defaultType="expense" onSubmit={onSubmit} onClose={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: /debit · money out/i })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: /credit · money in/i }))
+    await user.type(screen.getByLabelText('Amount'), '125.50')
+    await user.type(screen.getByLabelText('Note'), 'Refund from a friend')
+    await user.click(screen.getByRole('button', { name: 'Save expense credit' }))
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'expense',
+        direction: 'credit',
+        amountMinor: 12550,
+        note: 'Refund from a friend',
+      }),
+    )
   })
 
   it('switches to salary mode and clears expense-only fields', async () => {

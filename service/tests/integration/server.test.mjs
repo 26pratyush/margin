@@ -73,6 +73,68 @@ test('creates salary and expense records and exposes the updated summary', async
   }
 })
 
+test('accepts an amount-only expense without creating a blank category through the HTTP boundary', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-optional-expense-test-'))
+  const context = await startServer(directory)
+  try {
+    const expense = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        type: 'expense',
+        amountMinor: 2400,
+        occurredOn: '2026-08-21',
+        name: '  ',
+        categoryName: '  ',
+        note: '  ',
+      }),
+    })
+    const expenseBody = await expense.json()
+    assert.equal(expense.status, 201)
+    assert.equal(expenseBody.category, null)
+    assert.equal('name' in expenseBody.entry, false)
+    assert.equal('categoryId' in expenseBody.entry, false)
+    assert.equal('note' in expenseBody.entry, false)
+
+    const dataset = await fetch(`${context.url}/api/dataset`).then((response) => response.json())
+    assert.equal(dataset.entries.length, 1)
+    assert.equal(dataset.categories.length, 0)
+    assert.equal(dataset.entries[0].amountMinor, 2400)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('records a credit expense as inbound non-salary money without treating it as spending', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-credit-expense-test-'))
+  const context = await startServer(directory)
+  try {
+    const response = await fetch(`${context.url}/api/entries`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        type: 'expense',
+        direction: 'credit',
+        amountMinor: 250000,
+        occurredOn: '2026-08-21',
+        note: 'Refund from a friend',
+      }),
+    })
+    const result = await response.json()
+
+    assert.equal(response.status, 201)
+    assert.equal(result.entry.direction, 'credit')
+    assert.equal(result.summary.actualBalanceMinor, 250000)
+    assert.equal(result.summary.expenseMinor, 0)
+    assert.equal(result.summary.expenseCreditMinor, 250000)
+    assert.equal(result.summary.spendingMinor, 0)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('projects filtered history, grouped sync events, and unchanged global summaries through the read boundary', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-history-test-'))
   const context = await startServer(directory)

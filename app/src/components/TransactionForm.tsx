@@ -2,9 +2,11 @@ import { FormEvent, useState } from 'react'
 import { isValidCivilDate, parseAmountToMinor, todayCivilDate } from '../domain/money'
 
 export type TransactionKind = 'income' | 'expense'
+export type TransactionDirection = 'credit' | 'debit'
 
 export type TransactionDraft = {
   type: TransactionKind
+  direction?: TransactionDirection
   amountMinor: number
   occurredOn: string
   name?: string
@@ -15,7 +17,7 @@ export type TransactionDraft = {
 
 export type TransactionCategory = { id: string; name: string }
 
-type FieldErrors = Partial<Record<'amount' | 'occurredOn' | 'name' | 'categoryName' | 'form', string>>
+type FieldErrors = Partial<Record<'amount' | 'occurredOn' | 'form', string>>
 
 const CREATE_CATEGORY_VALUE = '__create_category__'
 
@@ -56,6 +58,7 @@ export function TransactionForm({
   onClose: () => void
 }) {
   const [type, setType] = useState<TransactionKind>(defaultType)
+  const [direction, setDirection] = useState<TransactionDirection>('debit')
   const [amount, setAmount] = useState('')
   const [occurredOn, setOccurredOn] = useState(todayCivilDate())
   const [expenseName, setExpenseName] = useState('')
@@ -69,6 +72,7 @@ export function TransactionForm({
 
   function changeType(nextType: TransactionKind) {
     setType(nextType)
+    setDirection('debit')
     setExpenseName('')
     setCategorySelection('')
     setNewCategoryName('')
@@ -79,7 +83,6 @@ export function TransactionForm({
   function changeCategory(value: string) {
     setCategorySelection(value)
     if (value !== CREATE_CATEGORY_VALUE) setNewCategoryName('')
-    setErrors((current) => ({ ...current, categoryName: undefined }))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -92,8 +95,6 @@ export function TransactionForm({
         : (availableCategories.find((category) => category.id === categorySelection)?.name.trim() ?? '')
     if (amountMinor === null) nextErrors.amount = 'Enter an amount greater than ₹0, using up to 2 decimal places.'
     if (!isValidCivilDate(occurredOn)) nextErrors.occurredOn = 'Enter a real calendar date.'
-    if (type === 'expense' && expenseName.trim() === '') nextErrors.name = 'Add a name for this expense.'
-    if (type === 'expense' && categoryName === '') nextErrors.categoryName = 'Choose or create a category.'
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors)
       return
@@ -106,8 +107,9 @@ export function TransactionForm({
         type,
         amountMinor: amountMinor as number,
         occurredOn,
-        ...(type === 'expense' ? { name: expenseName.trim() } : {}),
-        ...(type === 'expense' ? { categoryName: categoryName.trim() } : {}),
+        ...(type === 'expense' ? { direction } : {}),
+        ...(type === 'expense' && expenseName.trim() ? { name: expenseName.trim() } : {}),
+        ...(type === 'expense' && categoryName ? { categoryName } : {}),
         ...(source.trim() ? { source: source.trim() } : {}),
         ...(note.trim() ? { note: note.trim() } : {}),
       })
@@ -129,7 +131,7 @@ export function TransactionForm({
         <div>
           <p className="card-label">New record</p>
           <h2 id="transaction-form-title">Add to your ledger</h2>
-          <p>Keep the amount, date, and reason clear. You can add more detail later.</p>
+          <p>Keep the amount and date clear. Add a name or category when the context is useful.</p>
         </div>
         <button
           type="button"
@@ -158,6 +160,29 @@ export function TransactionForm({
           Salary
         </button>
       </div>
+      {type === 'expense' && (
+        <div className="transaction-direction" role="group" aria-label="Expense direction">
+          <span className="transaction-direction-label">Effect on balance</span>
+          <div className="transaction-kind transaction-direction-options">
+            <button
+              type="button"
+              className={`kind-button ${direction === 'debit' ? 'kind-button-active' : ''}`}
+              aria-pressed={direction === 'debit'}
+              onClick={() => setDirection('debit')}
+            >
+              Debit · money out
+            </button>
+            <button
+              type="button"
+              className={`kind-button ${direction === 'credit' ? 'kind-button-active' : ''}`}
+              aria-pressed={direction === 'credit'}
+              onClick={() => setDirection('credit')}
+            >
+              Credit · money in
+            </button>
+          </div>
+        </div>
+      )}
       <form className="transaction-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
         <div className="form-grid">
           <label className="field field-amount">
@@ -184,34 +209,29 @@ export function TransactionForm({
           </label>
           {type === 'expense' && (
             <label className="field">
-              <span>Expense name</span>
+              <span>
+                Expense name <em>Optional</em>
+              </span>
               <input
                 type="text"
                 aria-label="Expense name"
                 value={expenseName}
                 onChange={(event) => setExpenseName(event.target.value)}
-                aria-invalid={Boolean(errors.name)}
-                aria-describedby={errors.name ? 'name-error' : undefined}
                 placeholder="What was this for?"
               />
-              {errors.name && (
-                <small id="name-error" className="field-error">
-                  {errors.name}
-                </small>
-              )}
             </label>
           )}
           {type === 'expense' && (
             <label className="field">
-              <span>Category</span>
+              <span>
+                Category <em>Optional</em>
+              </span>
               <select
                 aria-label="Category"
                 value={categorySelection}
                 onChange={(event) => changeCategory(event.target.value)}
-                aria-invalid={Boolean(errors.categoryName)}
-                aria-describedby={errors.categoryName ? 'category-error' : undefined}
               >
-                <option value="">Choose a category</option>
+                <option value="">Uncategorized</option>
                 {availableCategories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -225,15 +245,8 @@ export function TransactionForm({
                   aria-label="New category"
                   value={newCategoryName}
                   onChange={(event) => setNewCategoryName(event.target.value)}
-                  aria-invalid={Boolean(errors.categoryName)}
-                  aria-describedby={errors.categoryName ? 'category-error' : undefined}
                   placeholder="Name your category"
                 />
-              )}
-              {errors.categoryName && (
-                <small id="category-error" className="field-error">
-                  {errors.categoryName}
-                </small>
               )}
             </label>
           )}
@@ -290,7 +303,13 @@ export function TransactionForm({
             Cancel
           </button>
           <button type="submit" className="button button-primary" disabled={submitting}>
-            {submitting ? 'Saving…' : type === 'income' ? 'Save salary' : 'Save expense'}
+            {submitting
+              ? 'Saving…'
+              : type === 'income'
+                ? 'Save salary'
+                : direction === 'credit'
+                  ? 'Save expense credit'
+                  : 'Save expense'}
           </button>
         </div>
       </form>

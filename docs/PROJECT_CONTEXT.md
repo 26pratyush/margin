@@ -49,6 +49,7 @@ At any point in a calendar month, the user should be able to answer:
 ### Later roadmap work
 
 - History filters and richer entry-history presentation are implemented by MARGIN-018 as a read-only local projection; correction and void commands are implemented at the service boundary by MARGIN-017 and remain the only posted-entry mutation path.
+- Progressive expense metadata is implemented by MARGIN-019; missing names and categories remain absent in stored records and use deterministic presentation fallbacks.
 - Recurring commitment automation.
 - Charts, trend views, and broad insights.
 
@@ -65,12 +66,12 @@ At any point in a calendar month, the user should be able to answer:
 ## Key terms
 
 - **Income:** money entering the tracked system, such as salary.
-- **Expense:** money already spent.
+- **Expense:** a non-salary cash movement recorded with a positive amount and an explicit `debit` (money out) or `credit` (money in) direction; missing direction on legacy records means debit, and name, category, and note may be absent when the user needs a fast save.
 - **Investment:** an actual debit for an investment contribution; it reduces cash but is reported separately from ordinary spending.
 - **Refund:** money returned from an expense or investment.
 - **Commitment:** money planned or reserved for a recurring obligation, such as an SIP or RD.
 - **Actual balance:** calculated cash after active credits, debits, and reconciliation adjustments, before planned commitments.
-- **Reconciliation:** a comparison between calculated actual balance and the real account balance entered by the user.
+- **Reconciliation:** a comparison between calculated actual balance and the real account balance entered by the user; a non-zero difference creates one explicit active credit or debit adjustment, while a zero difference creates only a snapshot.
 - **Disposable balance:** income minus expenses and commitments for the selected period.
 - **Period:** a week, month, or custom date range used for summaries.
 - **Planning cycle:** a local calendar-month range `[start, end)` used to compare opening actual cash, expected and actual salary, movement, commitments, and disposable balance.
@@ -95,7 +96,10 @@ At any point in a calendar month, the user should be able to answer:
 - The domain model separates actual ledger entries, planned commitments, and reconciliation snapshots.
 - Reconciliation compares real account balance to actual cash, then records a separate adjustment for untracked activity; commitments are applied afterward to derive disposable balance.
 - Monthly planning uses local calendar-month cycles. Opening and closing actual balances are derived from active ledger movements; expected salary is kept separate until an actual income entry exists; remaining commitments are applied afterward to derive disposable balance.
+- Planning reserves created from the monthly locker are due on the last civil day of their calendar month, including leap-day and December rollover cases; the due date is not the first day of the cycle.
 - Planning-cycle inputs are persisted as a versioned local `planningCycles` collection; opening actual, actual salary, rollover, closing actual, commitment reservations, disposable balance, and salary variance remain derived from the existing ledger and commitment facts.
+- Expense credits remain expenses for entry/history filtering but count as inbound movement rather than spending, do not settle commitments, and do not become salary or refund records. Existing expenses without `direction` retain debit behavior.
+- The Overview screen exposes local balance sync. It accepts a signed real balance and optional note, posts to `/api/reconcile`, and refreshes actual/disposable balances from the service after the corresponding adjustment or zero-difference snapshot is persisted.
 - Financial dates remain canonical as ISO `YYYY-MM-DD` in storage, domain values, APIs, and backups; the UI formats them for the user's locale, including `DD/MM/YYYY` for India.
 - v0.1 uses one local ledger currency, defaulting to INR with two decimal places, and does not support FX conversion.
 

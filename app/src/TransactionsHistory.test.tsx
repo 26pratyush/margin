@@ -57,6 +57,7 @@ function renderTransactions(history: HistoryResponse) {
       summary={{
         incomeMinor: 0,
         expenseMinor: 1000,
+        expenseCreditMinor: 0,
         refundMinor: 0,
         investmentMinor: 0,
         spendingMinor: 1000,
@@ -98,6 +99,13 @@ describe('transaction history filters', () => {
       expect.stringContaining('period=this-month&type=all&status=active'),
       expect.objectContaining({ headers: expect.any(Object) }),
     )
+  })
+
+  it('uses stable fallback labels for an uncategorized expense', async () => {
+    renderTransactions(response([{ kind: 'entry', entry: entry({ name: undefined, categoryId: undefined }) }]))
+
+    expect(await screen.findByText('Uncategorized expense')).toBeInTheDocument()
+    expect(screen.getByText('Category: Uncategorized')).toBeInTheDocument()
   })
 
   it('supports instant presets, inclusive custom ranges, and reset', async () => {

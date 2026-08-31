@@ -33,10 +33,10 @@ npm run build
 Tests are separated by the boundary they exercise:
 
 - `service/tests/unit/` tests pure calculations, validation, and backup transformations without SQLite or HTTP.
-- `service/tests/unit/planning.test.mjs` covers calendar-cycle boundaries, rollover, salary states, commitments, and signed balances.
+- `service/tests/unit/planning.test.mjs` covers calendar-cycle boundaries, rollover, salary states, commitments, signed balances, and month-end planning inputs.
 - `service/tests/integration/` tests the SQLite storage adapter and loopback HTTP API using temporary directories.
 - `service/tests/fixtures/` contains reusable synthetic financial records only.
-- `app/src/**/*.test.{ts,tsx}` tests browser-side amount/date helpers and interactive form behavior with Vitest and Testing Library.
+- `app/src/**/*.test.{ts,tsx}` tests browser-side amount/date helpers, signed balance parsing, month-end date resolution, interactive transaction direction, balance-sync form behavior, and history presentation with Vitest and Testing Library.
 - Browser smoke tests should be added only when a larger stable vertical slice exists.
 
 Tests should assert public domain or service behavior rather than SQLite table details. Prefer table-driven cases and explicit expected values over snapshots. Every test must be isolated, use deterministic IDs/dates, and leave temporary data behind only inside its temporary directory.
@@ -101,6 +101,18 @@ Automated result: `npm run quality` passed with 69 service tests, 29 UI tests, T
 History result: local Monday-week, today/month/year rollover, leap-date, custom inclusive range, invalid-range, type/status filtering, voided correction lineage, balance-sync adjustments, zero-difference syncs, reconciliation review labels, deterministic ordering, and global-summary invariants passed.
 UI result: preset selection, custom range application and reset, keyboard-accessible filter controls, civil-day grouping, empty/loading/error states, active/voided presentation, sync presentation, and responsive layout coverage passed. Interactive browser control was unavailable in this session; the service and UI behavior is covered by deterministic synthetic tests.
 Privacy result: no real financial data, credentials, external API, hosted query service, persistence schema change, or backup format change was introduced.
+
+### MARGIN-019 progressive-expense-metadata review record
+
+Verification date: 2026-08-30
+Branch: `codex/MARGIN-019-progressive-expense-metadata`
+Runtime: Node.js 26.5.0, npm 11.17.0, synthetic temporary data directories only
+Automated result: `npm run quality` passed with 76 service tests, 37 UI tests, TypeScript validation, and production build. Service coverage was 93.96% lines, 83.35% branches, and 97.60% functions.
+Metadata and ledger result: amount-only expense creation passed validation, HTTP/storage persistence, positive amount/date guards, blank metadata normalization, no-blank-category behavior, normalized category reuse, unchanged debit totals, explicit credit-expense movement, commitment protection, and lossless backup/restore.
+Planning and sync result: planned reserves now use the final civil day of their month (including leap-day/year rollover cases); signed reconciliation input creates the existing single credit/debit adjustment or a zero-difference snapshot, persists snapshot creation time, and rejects unknown command fields before writing.
+UI result: optional metadata labels, explicit `Uncategorized` selection, amount-only submission, expense debit/credit controls with debit default, signed/zero balance-sync input, sync errors, month-end due-date presentation, existing category selection, inline category creation, stable history fallback labels, and keyboard focus coverage passed. Interactive browser control was unavailable in this session; responsive and reduced-motion behavior remain defined by the existing CSS boundary.
+Synthetic result: seeded local data, added synthetic amount-only and credit-expense records, confirmed debit/credit balance behavior and no new category for absent metadata, exercised balance reconciliation, and restored the exported backup successfully. No real financial data was used.
+Privacy result: no real financial data, credentials, external API, hosted persistence, destructive migration, or backup-format change was introduced; the optional expense direction and snapshot creation timestamp remain compatible with legacy records.
 
 ## Coverage policy
 

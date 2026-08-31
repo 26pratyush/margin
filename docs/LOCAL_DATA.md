@@ -36,6 +36,12 @@ The service still accepts the original flat v1 backup shape and migrates it in m
 
 Dataset schema version 3 adds the persisted entry lifecycle metadata needed for safe correction and void commands. Existing entries without payload timestamps are backfilled from their SQLite row version during normal startup migration without changing their IDs or financial fields. The backup envelope remains at format version 2: flat v1 backups and pre-planning v2 backups are still normalized with an empty planning-cycle collection, while corrected and voided entries retain their lineage and lifecycle metadata in the existing integrity-protected data.
 
+Expense name, category, and note metadata are optional. An amount-only expense is stored without blank fields or a synthetic category; the UI presents it as `Uncategorized expense` / `Uncategorized` while exports and restores preserve the absent fields exactly.
+
+Expense records use a positive `amountMinor` plus an optional `direction` of `debit` or `credit`. New records persist the direction explicitly and legacy records without it normalize to debit behavior. Debit expenses reduce actual balance and spending totals; credit expenses increase actual balance, remain separate from salary/refund records, and do not settle planned commitments. Corrections preserve and may change this direction through the dedicated correction command.
+
+Balance sync is a local write through `POST /api/reconcile` with a canonical `asOf` date, signed `realBalanceMinor`, and optional note. The service compares the entered balance with the current active ledger, creates at most one reconciliation adjustment for a non-zero difference, and stores the snapshot with the adjustment lineage. A zero difference stores a snapshot without an adjustment. Both records are included in JSON backup and restore.
+
 The SQLite migration adds a per-record schema marker to the existing generic `records` table and backfills entry timestamps where needed. Existing entry records retain marker version 1, while planning-cycle records use the current dataset version 3; no second planning-specific database table is introduced.
 
 Restore validates the full file, verifies its integrity digest, checks cross-record references, shows a preview in the browser, creates a local pre-restore recovery snapshot, and replaces the dataset in one SQLite transaction. Invalid files cannot change the current dataset.

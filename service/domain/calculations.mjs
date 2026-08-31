@@ -4,6 +4,7 @@ export function signedEntryAmountMinor(entry) {
     case 'refund':
       return entry.amountMinor
     case 'expense':
+      return expenseIsDebit(entry) ? -entry.amountMinor : entry.amountMinor
     case 'investment':
       return -entry.amountMinor
     case 'adjustment':
@@ -13,6 +14,12 @@ export function signedEntryAmountMinor(entry) {
     default:
       throw new RangeError(`Unsupported entry type: ${String(entry.type)}`)
   }
+}
+
+function expenseIsDebit(entry) {
+  if (entry.direction === undefined || entry.direction === 'debit') return true
+  if (entry.direction === 'credit') return false
+  throw new RangeError(`Unsupported expense direction: ${String(entry.direction)}`)
 }
 
 export function calculateActualBalanceMinor(entries) {
@@ -32,7 +39,7 @@ export function calculateRemainingCommitmentMinor(commitment, entries) {
     .filter(
       (entry) =>
         entry.status === 'active' &&
-        ['expense', 'investment'].includes(entry.type) &&
+        (entry.type === 'investment' || (entry.type === 'expense' && expenseIsDebit(entry))) &&
         (entry.commitmentId === commitment.id || linkedEntryIds.has(entry.id)),
     )
     .reduce((total, entry) => total + entry.amountMinor, 0)

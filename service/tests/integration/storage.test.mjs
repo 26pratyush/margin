@@ -85,6 +85,39 @@ test('creates salary and expense records atomically and reuses expense categorie
   }
 })
 
+test('saves amount-only expenses without creating blank categories', async () => {
+  await withStorage(async (storage) => {
+    const result = storage.createTransaction({
+      type: 'expense',
+      amountMinor: 2400,
+      occurredOn: '2026-08-21',
+      name: '  ',
+      categoryName: '  ',
+      note: '  ',
+    })
+
+    assert.equal(result.category, null)
+    assert.equal(result.entry.amountMinor, 2400)
+    assert.equal(result.entry.type, 'expense')
+    assert.equal(result.entry.direction, 'debit')
+    assert.equal('name' in result.entry, false)
+    assert.equal('categoryId' in result.entry, false)
+    assert.equal('note' in result.entry, false)
+    assert.equal(storage.getDataset().categories.length, 0)
+    assert.equal(storage.getSummary().expenseMinor, 2400)
+
+    const backup = storage.exportBackup()
+    assert.equal('name' in backup.data.entries[0], false)
+    assert.equal('categoryId' in backup.data.entries[0], false)
+    const restored = await storage.restoreBackup(backup)
+    assert.equal(restored.dataset.entries.length, 1)
+    assert.equal(restored.dataset.entries[0].direction, 'debit')
+    assert.equal('name' in restored.dataset.entries[0], false)
+    assert.equal('categoryId' in restored.dataset.entries[0], false)
+    assert.equal(restored.dataset.categories.length, 0)
+  })
+})
+
 test('corrects an active expense with void-and-replace semantics across planning cycles', async () => {
   await withStorage(async (storage) => {
     storage.createTransaction({
@@ -731,9 +764,21 @@ test('persists a reconciliation snapshot and adjustment without rewriting prior 
     assert.equal(before.entries.length, 2)
     assert.equal(after.entries.length, 3)
     assert.equal(after.balanceSnapshots.length, 1)
+    assert.match(result.snapshot.createdAt, /^\d{4}-\d{2}-\d{2}T/)
     assert.equal(result.snapshot.adjustmentEntryId, result.adjustment.id)
     assert.equal(result.adjustment.direction, 'debit')
     assert.equal(storage.getActualBalance(), 9800000)
+  })
+})
+
+test('rejects unknown reconciliation fields before creating a snapshot or adjustment', async () => {
+  await withStorage(async (storage) => {
+    assert.throws(
+      () => storage.reconcile({ asOf: '2026-08-20', realBalanceMinor: 100, extra: 'ignored?' }),
+      (error) => error instanceof ValidationError && error.details.some((detail) => detail.includes('not writable')),
+    )
+    assert.equal(storage.getDataset().entries.length, 0)
+    assert.equal(storage.getDataset().balanceSnapshots.length, 0)
   })
 })
 

@@ -17,6 +17,25 @@ test('calculates actual balance from active cash movements', () => {
   assert.equal(calculateActualBalanceMinor(entries), 70500)
 })
 
+test('treats credit expenses as inbound money and keeps them out of commitments', () => {
+  const entries = [
+    syntheticEntry({ id: 'debit-expense', type: 'expense', amountMinor: 12500, direction: 'debit' }),
+    syntheticEntry({ id: 'credit-expense', type: 'expense', amountMinor: 2500, direction: 'credit' }),
+  ]
+
+  assert.equal(calculateActualBalanceMinor(entries), -10000)
+  assert.equal(
+    calculateRemainingCommitmentMinor({ id: 'bill', plannedAmountMinor: 5000, linkedEntryIds: [] }, [
+      { ...entries[1], commitmentId: 'bill' },
+    ]),
+    5000,
+  )
+  const summary = calculateLedgerSummary({ entries, commitments: [] })
+  assert.equal(summary.expenseMinor, 12500)
+  assert.equal(summary.expenseCreditMinor, 2500)
+  assert.equal(summary.spendingMinor, 12500)
+})
+
 test('ignores voided entries and returns zero for an empty ledger', () => {
   assert.equal(calculateActualBalanceMinor([]), 0)
   assert.equal(calculateActualBalanceMinor([syntheticEntry({ status: 'voided', amountMinor: 999999 })]), 0)
@@ -33,6 +52,13 @@ test('rejects an unsupported adjustment direction instead of treating it as a de
   assert.throws(
     () => calculateActualBalanceMinor([syntheticEntry({ type: 'adjustment', direction: 'unknown' })]),
     (error) => error instanceof RangeError && error.message.includes('Unsupported adjustment direction'),
+  )
+})
+
+test('rejects an unsupported expense direction instead of treating it as a debit', () => {
+  assert.throws(
+    () => calculateActualBalanceMinor([syntheticEntry({ type: 'expense', direction: 'unknown' })]),
+    (error) => error instanceof RangeError && error.message.includes('Unsupported expense direction'),
   )
 })
 

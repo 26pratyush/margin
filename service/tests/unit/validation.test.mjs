@@ -7,6 +7,7 @@ import {
   validateEntryCorrectionInput,
   validateEntryCorrectionPatch,
   validateEntryVoidInput,
+  validateReconciliationInput,
   validateRecord,
   validateTransactionInput,
 } from '../../validation.mjs'
@@ -70,6 +71,7 @@ test('validates and normalizes first-slice salary and expense commands', () => {
       type: 'expense',
       amountMinor: 125000,
       occurredOn: '2026-08-21',
+      direction: 'debit',
       name: '  Lunch  ',
       categoryName: '  Food  ',
       note: 'Lunch',
@@ -78,6 +80,7 @@ test('validates and normalizes first-slice salary and expense commands', () => {
       type: 'expense',
       amountMinor: 125000,
       occurredOn: '2026-08-21',
+      direction: 'debit',
       name: 'Lunch',
       categoryName: 'Food',
       note: 'Lunch',
@@ -93,12 +96,33 @@ test('validates and normalizes first-slice salary and expense commands', () => {
     note: undefined,
     source: undefined,
   })
+  assert.deepEqual(
+    validateTransactionInput({
+      type: 'expense',
+      amountMinor: 2400,
+      occurredOn: '2026-08-21',
+      direction: 'debit',
+      name: '   ',
+      categoryName: '  ',
+      note: '  ',
+    }),
+    {
+      type: 'expense',
+      amountMinor: 2400,
+      occurredOn: '2026-08-21',
+      direction: 'debit',
+      name: undefined,
+      categoryName: undefined,
+      note: undefined,
+      source: undefined,
+    },
+  )
 })
 
 test('rejects invalid first-slice transaction commands', () => {
   assert.throws(
     () => validateTransactionInput({ type: 'expense', amountMinor: 0, occurredOn: '2026-02-30' }),
-    (error) => error instanceof ValidationError && error.details.length >= 3,
+    (error) => error instanceof ValidationError && error.details.length >= 2,
   )
   assert.throws(
     () =>
@@ -109,6 +133,31 @@ test('rejects invalid first-slice transaction commands', () => {
   assert.throws(
     () => validateTransactionInput({ type: 'income', amountMinor: 100, occurredOn: '2026-08-01', name: 'Salary' }),
     (error) => error instanceof ValidationError && error.details.includes('name is only supported for expenses'),
+  )
+  assert.throws(
+    () =>
+      validateTransactionInput({ type: 'expense', amountMinor: 100, occurredOn: '2026-08-01', direction: 'sideways' }),
+    (error) =>
+      error instanceof ValidationError && error.details.includes('direction must be credit or debit for an expense'),
+  )
+  assert.throws(
+    () => validateTransactionInput({ type: 'income', amountMinor: 100, occurredOn: '2026-08-01', direction: 'credit' }),
+    (error) => error instanceof ValidationError && error.details.includes('direction is only supported for expenses'),
+  )
+})
+
+test('validates signed reconciliation inputs without changing the amount meaning', () => {
+  assert.deepEqual(
+    validateReconciliationInput({ asOf: '2026-08-31', realBalanceMinor: -1250, note: '  Overdraft  ' }),
+    { asOf: '2026-08-31', realBalanceMinor: -1250, note: 'Overdraft' },
+  )
+  assert.deepEqual(validateReconciliationInput({ asOf: '2026-08-31', realBalanceMinor: 0 }), {
+    asOf: '2026-08-31',
+    realBalanceMinor: 0,
+  })
+  assert.throws(
+    () => validateReconciliationInput({ asOf: '2026-02-30', realBalanceMinor: 100, extra: true }),
+    (error) => error instanceof ValidationError && error.details.length === 2,
   )
 })
 
