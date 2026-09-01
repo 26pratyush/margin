@@ -35,7 +35,10 @@ function response(items: HistoryResponse['items']): HistoryResponse {
   }
 }
 
-function renderTransactions(history: HistoryResponse) {
+function renderTransactions(
+  history: HistoryResponse,
+  options: { mode?: 'real' | 'synthetic'; referenceOn?: string } = {},
+) {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => history })
   vi.stubGlobal('fetch', fetchMock)
   render(
@@ -53,6 +56,7 @@ function renderTransactions(history: HistoryResponse) {
         categories: [],
         commitments: [],
         balanceSnapshots: history.items.flatMap((item) => (item.kind === 'balance-sync' ? [item.snapshot] : [])),
+        planningCycles: [],
       }}
       summary={{
         incomeMinor: 0,
@@ -67,12 +71,14 @@ function renderTransactions(history: HistoryResponse) {
         entryCount: 1,
         activeEntryCount: 1,
       }}
-      onSeed={vi.fn()}
+      onOpenDemo={vi.fn()}
       onNavigate={vi.fn()}
       latestSalaryMinor={null}
       onRepeatSalary={vi.fn().mockResolvedValue(undefined)}
       onOpenForm={vi.fn()}
       onRefresh={vi.fn()}
+      mode={options.mode}
+      referenceOn={options.referenceOn}
     />,
   )
   return fetchMock
@@ -151,6 +157,23 @@ describe('transaction history filters', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent(/start date must be on or before/i)
     expect(fetchMock).toHaveBeenCalledTimes(customCallCount)
+  })
+
+  it('anchors synthetic custom-range defaults and reset to the demo reference date', async () => {
+    const user = userEvent.setup()
+    renderTransactions(response([{ kind: 'entry', entry: entry({ name: 'Synthetic lunch' }) }]), {
+      mode: 'synthetic',
+      referenceOn: '2026-08-15',
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Custom range' }))
+    expect(screen.getByLabelText('Custom range start')).toHaveValue('2026-08-01')
+    expect(screen.getByLabelText('Custom range end')).toHaveValue('2026-08-15')
+
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }))
+    await user.click(screen.getByRole('button', { name: 'Custom range' }))
+    expect(screen.getByLabelText('Custom range start')).toHaveValue('2026-08-01')
+    expect(screen.getByLabelText('Custom range end')).toHaveValue('2026-08-15')
   })
 
   it('reveals voided lineage and balance-sync rows when history is broadened', async () => {

@@ -114,6 +114,18 @@ UI result: optional metadata labels, explicit `Uncategorized` selection, amount-
 Synthetic result: seeded local data, added synthetic amount-only and credit-expense records, confirmed debit/credit balance behavior and no new category for absent metadata, exercised balance reconciliation, and restored the exported backup successfully. No real financial data was used.
 Privacy result: no real financial data, credentials, external API, hosted persistence, destructive migration, or backup-format change was introduced; the optional expense direction and snapshot creation timestamp remain compatible with legacy records.
 
+### MARGIN-020 first-use guide and synthetic preview review record
+
+Verification date: 2026-09-01
+Branch: `codex/MARGIN-020-first-use-guide-and-synthetic-demo`
+Runtime: Node.js 26.5.0, npm 11.17.0, synthetic temporary data directory under `/private/tmp`
+Automated result: `npm run quality` passed with 80 service tests, 45 UI tests, TypeScript validation, and production build. Service coverage was 93.92% lines, 83.17% branches, and 97.69% functions.
+Guide result: empty-workspace eligibility, versioned `localStorage` seen state, skip, remount persistence, Settings refresher, keyboard-labelled actions, and no `/api/seed` browser path passed. The guide is presentation state only and does not alter the local dataset.
+Demo result: deterministic fixture construction and fresh mutable instances passed. The read-only `/api/demo`, `/api/demo/history`, and `/api/demo/planning-cycles/2026-08` boundaries returned reference date `2026-08-15`, salary on August 1, early-month expense/investment movement, and a reserve due August 31. Overview, history, and planning use the fixed reference date; synthetic custom-range defaults and reset return to August 15.
+Isolation result: the temporary-data smoke flow confirmed an empty real dataset before and after demo reads. A write attempt to `/api/demo/reset` returned 404 and the real summary remained zero. UI read-only coverage removed balance-sync, transaction, planning, backup/import, and reset mutation paths while synthetic mode was active. Demo mode is not persisted and exit reloads the real dataset.
+UI result: visible synthetic labeling, mid-month content, history grouping, guide persistence, fixed-date filters, reduced-motion-safe CSS, responsive layout rules, and direct read-only form coverage passed in Vitest/Testing Library. Interactive desktop/mobile/screen-reader browser control was unavailable in this session; deterministic component and service coverage provide the automated evidence.
+Privacy result: no real financial data, credentials, external API, hosted persistence, SQLite schema change, or backup-format change was introduced. The browser guide preference is not included in ledger backup/export.
+
 ## Coverage policy
 
 The current service coverage floors are intentionally modest but regression-oriented:

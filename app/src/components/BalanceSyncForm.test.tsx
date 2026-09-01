@@ -58,4 +58,19 @@ describe('BalanceSyncForm', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Local service unavailable.')
     expect(screen.getByLabelText('Real balance')).toHaveValue('1250')
   })
+
+  it('removes the real balance mutation controls in synthetic preview mode', () => {
+    render(
+      <BalanceSyncForm
+        actualBalanceMinor={100000}
+        currency="INR"
+        onSync={vi.fn().mockResolvedValue(undefined)}
+        readOnly
+      />,
+    )
+
+    expect(screen.queryByLabelText('Real balance')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sync real balance' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Exit the demo to sync your real account balance/)).toBeInTheDocument()
+  })
 })

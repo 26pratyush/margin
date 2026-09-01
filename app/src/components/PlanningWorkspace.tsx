@@ -48,6 +48,7 @@ type PlanningWorkspaceProps = {
   onSaveSalary: (input: { expectedSalaryMinor: number; expectedSalaryOn?: string }) => Promise<void>
   onReserve: (draft: ReserveDraft) => Promise<void>
   onRetry: () => void
+  readOnly?: boolean
 }
 
 function PlanningHeading({
@@ -153,11 +154,13 @@ function LockerCard({
   currency,
   cycle,
   onReserve,
+  readOnly = false,
 }: {
   reservedAmountMinor: number
   currency: string
   cycle: PlanningCycle
   onReserve: (draft: ReserveDraft) => Promise<void>
+  readOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [showReserve, setShowReserve] = useState(false)
@@ -245,7 +248,11 @@ function LockerCard({
             ✓
           </span>
         </div>
-        {!showReserve ? (
+        {readOnly ? (
+          <p className="planning-read-only-note">
+            This synthetic reserve is illustrative. Exit the demo to make a real plan.
+          </p>
+        ) : !showReserve ? (
           <button type="button" className="button button-primary" onClick={() => setShowReserve(true)}>
             Reserve money for {cycleLabel(cycle.cycleKey)}
           </button>
@@ -319,10 +326,12 @@ function SalaryPlanCard({
   planning,
   currency,
   onSave,
+  readOnly = false,
 }: {
   planning: PlanningResponse
   currency: string
   onSave: (input: { expectedSalaryMinor: number; expectedSalaryOn?: string }) => Promise<void>
+  readOnly?: boolean
 }) {
   const [amount, setAmount] = useState(
     planning.summary.expectedSalaryMinor === null ? '' : String(planning.summary.expectedSalaryMinor / 100),
@@ -377,51 +386,57 @@ function SalaryPlanCard({
           <strong>{money(summary.actualSalaryMinor, currency)}</strong>
         </div>
       </div>
-      <form className="salary-plan-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
-        <div className="form-grid">
-          <label className="field">
-            <span>Expected salary</span>
-            <span className="field-input-wrap">
-              <span className="field-prefix">₹</span>
+      {readOnly ? (
+        <p className="planning-read-only-note">
+          Synthetic planning values are illustrative and cannot be changed here.
+        </p>
+      ) : (
+        <form className="salary-plan-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
+          <div className="form-grid">
+            <label className="field">
+              <span>Expected salary</span>
+              <span className="field-input-wrap">
+                <span className="field-prefix">₹</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  aria-label="Expected salary"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  aria-invalid={Boolean(error && !parseAmountToMinor(amount))}
+                  placeholder="0.00"
+                />
+              </span>
+            </label>
+            <label className="field">
+              <span>
+                Expected on <em>optional</em>
+              </span>
               <input
-                type="text"
-                inputMode="decimal"
-                aria-label="Expected salary"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                aria-invalid={Boolean(error && !parseAmountToMinor(amount))}
-                placeholder="0.00"
+                type="date"
+                aria-label="Expected salary date"
+                value={expectedOn}
+                onChange={(event) => setExpectedOn(event.target.value)}
+                aria-invalid={Boolean(error && expectedOn !== '' && !isValidCivilDate(expectedOn))}
               />
-            </span>
-          </label>
-          <label className="field">
-            <span>
-              Expected on <em>optional</em>
-            </span>
-            <input
-              type="date"
-              aria-label="Expected salary date"
-              value={expectedOn}
-              onChange={(event) => setExpectedOn(event.target.value)}
-              aria-invalid={Boolean(error && expectedOn !== '' && !isValidCivilDate(expectedOn))}
-            />
-          </label>
-        </div>
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="form-actions">
-          <button type="submit" className="button button-secondary" disabled={submitting}>
-            {submitting
-              ? 'Saving…'
-              : summary.expectedSalaryMinor === null
-                ? 'Set expected salary'
-                : 'Update expectation'}
-          </button>
-        </div>
-      </form>
+            </label>
+          </div>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="form-actions">
+            <button type="submit" className="button button-secondary" disabled={submitting}>
+              {submitting
+                ? 'Saving…'
+                : summary.expectedSalaryMinor === null
+                  ? 'Set expected salary'
+                  : 'Update expectation'}
+            </button>
+          </div>
+        </form>
+      )}
     </section>
   )
 }
@@ -437,6 +452,7 @@ export function PlanningWorkspace({
   onSaveSalary,
   onReserve,
   onRetry,
+  readOnly = false,
 }: PlanningWorkspaceProps) {
   if (loading && !planning) {
     return (
@@ -564,8 +580,9 @@ export function PlanningWorkspace({
           currency={currency}
           cycle={cycle}
           onReserve={onReserve}
+          readOnly={readOnly}
         />
-        <SalaryPlanCard planning={planning} currency={currency} onSave={onSaveSalary} />
+        <SalaryPlanCard planning={planning} currency={currency} onSave={onSaveSalary} readOnly={readOnly} />
       </div>
       <section className="panel planning-ledger-card" aria-labelledby="planning-ledger-title">
         <div className="panel-heading">

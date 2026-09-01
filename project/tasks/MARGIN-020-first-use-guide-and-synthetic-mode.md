@@ -25,3 +25,15 @@ Help a first-time user understand Margin before entering real local financial da
 ## Dependencies and non-goals
 
 Depends on the local-first boundary and EPIC-002. No account system, analytics tracking, tutorial CMS, gamification, or hosted finance path.
+
+## Implementation contract
+
+- The first-use guide is a compact inline panel, not a blocking wizard. It is shown automatically only after a successful real-dataset load confirms that there are no entries, commitments, balance snapshots, or planning cycles. The browser-only preference `margin.first-use-guide.v1=seen` suppresses automatic reopening across refreshes, remounts, and app restarts; Settings can explicitly reopen the guide. Browser storage failures do not affect ledger availability.
+- `Try synthetic data` opens a complete, read-only Overview, Transactions, Planning, and Commitments preview. The preview uses fresh in-memory data from the domain calculations on every request and never reads or writes SQLite.
+- The read-only demo boundary is `GET /api/demo`, `GET /api/demo/history` with the history filter contract, and `GET /api/demo/planning-cycles/:cycleKey`. There are no demo mutation endpoints. While synthetic mode is active, the browser hides or disables ledger, reconciliation, planning, backup/import, and reset writes.
+- The deterministic fixture is version 1 with reference date `2026-08-15`, salary on `2026-08-01`, early-August expense and investment movement, and a synthetic month-end reserve due on `2026-08-31`. History presets, labels, custom-range defaults, and planning use that reference date.
+- A persistent `Synthetic demo · Read-only` banner and explicit `Exit demo` action remain visible throughout the preview. Demo mode is held in memory only; exit reloads the real dataset, and an exit failure keeps the synthetic label visible with a retry path.
+
+## Implementation record
+
+Implemented on `codex/MARGIN-020-first-use-guide-and-synthetic-demo`. Automated verification and the final review record are maintained in [docs/TESTING.md](../../docs/TESTING.md).

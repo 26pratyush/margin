@@ -22,11 +22,13 @@ export function BalanceSyncForm({
   currency,
   latestSnapshot,
   onSync,
+  readOnly = false,
 }: {
   actualBalanceMinor: number
   currency: string
   latestSnapshot?: BalanceSyncSnapshot
   onSync: (draft: BalanceSyncDraft) => Promise<void>
+  readOnly?: boolean
 }) {
   const [realBalance, setRealBalance] = useState('')
   const [asOf, setAsOf] = useState(todayCivilDate())
@@ -83,59 +85,65 @@ export function BalanceSyncForm({
           </small>
         )}
       </div>
-      <form className="balance-sync-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
-        <div className="form-grid">
-          <label className="field field-amount">
-            <span>Real balance</span>
-            <span className="field-input-wrap">
-              <span className="field-prefix">₹</span>
+      {readOnly ? (
+        <p className="balance-sync-read-only">
+          Synthetic preview values are illustrative. Exit the demo to sync your real account balance.
+        </p>
+      ) : (
+        <form className="balance-sync-form" onSubmit={(event) => void handleSubmit(event)} noValidate>
+          <div className="form-grid">
+            <label className="field field-amount">
+              <span>Real balance</span>
+              <span className="field-input-wrap">
+                <span className="field-prefix">₹</span>
+                <input
+                  autoFocus={false}
+                  type="text"
+                  inputMode="decimal"
+                  aria-label="Real balance"
+                  value={realBalance}
+                  onChange={(event) => setRealBalance(event.target.value)}
+                  aria-invalid={Boolean(error && parseSignedAmountToMinor(realBalance) === null)}
+                  aria-describedby={error ? 'balance-sync-error' : undefined}
+                  placeholder="0.00"
+                />
+              </span>
+            </label>
+            <label className="field">
+              <span>Date</span>
               <input
-                autoFocus={false}
-                type="text"
-                inputMode="decimal"
-                aria-label="Real balance"
-                value={realBalance}
-                onChange={(event) => setRealBalance(event.target.value)}
-                aria-invalid={Boolean(error && parseSignedAmountToMinor(realBalance) === null)}
-                aria-describedby={error ? 'balance-sync-error' : undefined}
-                placeholder="0.00"
+                type="date"
+                aria-label="Balance sync date"
+                value={asOf}
+                onChange={(event) => setAsOf(event.target.value)}
+                aria-invalid={Boolean(error && !isValidCivilDate(asOf))}
               />
-            </span>
-          </label>
-          <label className="field">
-            <span>Date</span>
-            <input
-              type="date"
-              aria-label="Balance sync date"
-              value={asOf}
-              onChange={(event) => setAsOf(event.target.value)}
-              aria-invalid={Boolean(error && !isValidCivilDate(asOf))}
-            />
-          </label>
-          <label className="field field-wide">
-            <span>
-              Note <em>Optional</em>
-            </span>
-            <input
-              type="text"
-              aria-label="Balance sync note"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Checking the account after a bank transfer"
-            />
-          </label>
-        </div>
-        {error && (
-          <p id="balance-sync-error" className="form-error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="form-actions">
-          <button type="submit" className="button button-secondary" disabled={submitting}>
-            {submitting ? 'Syncing…' : 'Sync real balance'}
-          </button>
-        </div>
-      </form>
+            </label>
+            <label className="field field-wide">
+              <span>
+                Note <em>Optional</em>
+              </span>
+              <input
+                type="text"
+                aria-label="Balance sync note"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Checking the account after a bank transfer"
+              />
+            </label>
+          </div>
+          {error && (
+            <p id="balance-sync-error" className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="form-actions">
+            <button type="submit" className="button button-secondary" disabled={submitting}>
+              {submitting ? 'Syncing…' : 'Sync real balance'}
+            </button>
+          </div>
+        </form>
+      )}
     </section>
   )
 }

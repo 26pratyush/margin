@@ -171,4 +171,16 @@ describe('PlanningWorkspace', () => {
     expect(screen.getByText('The local planning service is unavailable.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
+
+  it('removes planning mutation controls in synthetic preview mode', async () => {
+    const user = userEvent.setup()
+    renderWorkspace({ readOnly: true })
+
+    expect(screen.getByText(/Synthetic planning values are illustrative/)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Expected salary' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Open locker' }))
+    expect(screen.getByText(/synthetic reserve is illustrative/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Reserve money for/ })).not.toBeInTheDocument()
+  })
 })
