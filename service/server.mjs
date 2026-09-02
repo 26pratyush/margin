@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { openStorage } from './storage.mjs'
 import { BackupError } from './backup.mjs'
+import { getSyntheticDemoHistory, getSyntheticDemoPlanning, getSyntheticDemoWorkspace } from './domain/demo.mjs'
 import {
   ConflictError,
   NotFoundError,
@@ -108,6 +109,31 @@ async function handleRequest(request, response, storage) {
 
   if (method === 'GET' && route[0] === 'health') {
     sendJson(response, 200, { status: 'ok', storage: 'sqlite', databaseFile: 'margin.sqlite' })
+    return
+  }
+
+  if (method === 'GET' && route[0] === 'demo' && route.length === 1) {
+    sendJson(response, 200, getSyntheticDemoWorkspace())
+    return
+  }
+
+  if (method === 'GET' && route[0] === 'demo' && route[1] === 'history' && route.length === 2) {
+    sendJson(
+      response,
+      200,
+      getSyntheticDemoHistory({
+        period: url.searchParams.get('period') ?? undefined,
+        type: url.searchParams.get('type') ?? undefined,
+        status: url.searchParams.get('status') ?? undefined,
+        startOn: url.searchParams.get('startOn') ?? undefined,
+        endOn: url.searchParams.get('endOn') ?? undefined,
+      }),
+    )
+    return
+  }
+
+  if (method === 'GET' && route[0] === 'demo' && route[1] === 'planning-cycles' && route.length === 3) {
+    sendJson(response, 200, getSyntheticDemoPlanning(route[2]))
     return
   }
 

@@ -74,6 +74,12 @@ Planning-cycle calculations are an additional derived domain boundary over the s
 - The app should use a stable localhost origin and explain that clearing browser data does not remove the SQLite file.
 - Reconciliation snapshots and their adjustment entries must be included in JSON backup/export so a restore preserves the user’s balance history.
 
+## First-use and demo boundary
+
+The first-use guide is presentation state only. Its versioned `localStorage` flag (`margin.first-use-guide.v1`) is deliberately outside the domain dataset and backup contract. A successful empty-dataset load makes the guide eligible; Settings can reopen it without changing ledger data.
+
+The synthetic preview is a separate read-only service projection over a fresh in-memory fixture. `/api/demo`, `/api/demo/history`, and `/api/demo/planning-cycles/:cycleKey` reuse domain calculations but never access SQLite. The fixture uses reference date `2026-08-15`, salary on August 1, early-month movements, and a reserve due August 31. The browser maintains a non-persistent synthetic mode with a visible banner, sends no write requests while active, and performs a real-dataset reload on exit. The existing CLI seed/reset tools remain explicit developer tooling and are not called by browser-facing onboarding.
+
 ## Deployment and container boundary
 
 - The finance application remains local and has no hosted API or hosted database.

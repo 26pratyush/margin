@@ -35,6 +35,41 @@ test('exposes health and persists a seeded dataset through the HTTP boundary', a
   }
 })
 
+test('serves an isolated synthetic demo without changing the real local dataset', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-demo-test-'))
+  const context = await startServer(directory)
+  try {
+    const realBefore = await fetch(`${context.url}/api/dataset`).then((response) => response.json())
+    const demo = await fetch(`${context.url}/api/demo`).then((response) => response.json())
+    const history = await fetch(`${context.url}/api/demo/history?period=this-month&type=all&status=active`).then(
+      (response) => response.json(),
+    )
+    const planning = await fetch(`${context.url}/api/demo/planning-cycles/2026-08`).then((response) => response.json())
+    const realAfter = await fetch(`${context.url}/api/dataset`).then((response) => response.json())
+    const attemptedWrite = await fetch(`${context.url}/api/demo/reset`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: '{}',
+    })
+
+    assert.equal(demo.mode, 'synthetic')
+    assert.equal(demo.referenceOn, '2026-08-15')
+    assert.equal(demo.dataset.entries.length, 3)
+    assert.equal(demo.dataset.commitments[0].dueOn, '2026-08-31')
+    assert.equal(history.items.length, 3)
+    assert.equal(planning.summary.disposableBalanceMinor, 5875000)
+    const { exportedAt: beforeExportedAt, ...realBeforeStable } = realBefore
+    const { exportedAt: afterExportedAt, ...realAfterStable } = realAfter
+    assert.equal(typeof beforeExportedAt, 'string')
+    assert.equal(typeof afterExportedAt, 'string')
+    assert.deepEqual(realAfterStable, realBeforeStable)
+    assert.equal(attemptedWrite.status, 404)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('creates salary and expense records and exposes the updated summary', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-entry-test-'))
   const context = await startServer(directory)

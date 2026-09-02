@@ -1,5 +1,6 @@
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react'
 import { BalanceSyncDraft, BalanceSyncForm, BalanceSyncSnapshot } from './components/BalanceSyncForm'
+import { FirstUseGuide } from './components/FirstUseGuide'
 import { PlanningResponse, PlanningWorkspace, ReserveDraft } from './components/PlanningWorkspace'
 import { SalaryRepeatButton, SalaryRepeatDraft } from './components/SalaryRepeatButton'
 import { TransactionDraft, TransactionForm, TransactionKind } from './components/TransactionForm'
@@ -17,6 +18,7 @@ import {
   validateCustomRange,
 } from './domain/history'
 import { todayCivilDate } from './domain/money'
+import { hasSeenFirstUseGuide, markFirstUseGuideSeen } from './domain/onboarding'
 
 type Entry = HistoryEntry
 
@@ -49,6 +51,16 @@ type Dataset = {
     adjustmentEntryId?: string
     note?: string
     reviewState?: 'current' | 'needs-review'
+  }>
+  planningCycles: Array<{
+    id: string
+    cycleKey: string
+    startOn: string
+    endOn: string
+    expectedSalaryMinor?: number
+    expectedSalaryOn?: string
+    createdAt?: string
+    updatedAt?: string
   }>
 }
 
@@ -104,6 +116,22 @@ type Notice = {
   text: string
 }
 
+type WorkspaceMode = 'real' | 'synthetic'
+
+type DemoWorkspaceResponse = {
+  mode: 'synthetic'
+  demoVersion: number
+  referenceOn: string
+  dataset: Dataset
+  summary: Summary
+}
+
+const SYNTHETIC_HEALTH: Health = {
+  status: 'ok',
+  storage: 'synthetic preview',
+  databaseFile: 'Not accessed in demo mode',
+}
+
 const navigation: Array<{ key: Route; label: string; description: string; icon: IconName }> = [
   { key: 'home', label: 'Overview', description: 'Your money at a glance', icon: 'home' },
   { key: 'transactions', label: 'Transactions', description: 'Income and spending', icon: 'transactions' },
@@ -152,6 +180,19 @@ function entryIsCredit(entry: Entry) {
 function amountLabel(entry: Entry, currency: string) {
   const positive = entryIsCredit(entry)
   return `${positive ? '+' : '−'}${money(entry.amountMinor, currency)}`
+}
+
+function workspaceHasData(dataset: Dataset) {
+  return (
+    dataset.entries.length > 0 ||
+    dataset.commitments.length > 0 ||
+    dataset.balanceSnapshots.length > 0 ||
+    dataset.planningCycles.length > 0
+  )
+}
+
+function workspacePath(mode: WorkspaceMode, path: string) {
+  return mode === 'synthetic' ? `/api/demo${path}` : `/api${path}`
 }
 
 const UNCATEGORIZED_LABEL = 'Uncategorized'
@@ -401,12 +442,16 @@ export function TransactionActions({
   currency,
   onRepeatSalary,
   onOpenForm,
+  readOnly = false,
 }: {
   latestSalaryMinor: number | null
   currency: string
   onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
   onOpenForm: (type?: TransactionKind) => void
+  readOnly?: boolean
 }) {
+  if (readOnly) return <span className="read-only-label">Synthetic preview</span>
+
   return (
     <div className="heading-actions">
       {latestSalaryMinor !== null && (
@@ -488,14 +533,14 @@ const HISTORY_STATUS_OPTIONS: Array<{ value: HistoryStatus; label: string }> = [
   { value: 'all', label: 'All' },
 ]
 
-function historyQueryPath(filters: HistoryQuery) {
+function historyQueryPath(filters: HistoryQuery, mode: WorkspaceMode) {
   const params = new URLSearchParams({ period: filters.period, type: filters.type, status: filters.status })
   if (filters.period === 'custom') {
     if (!filters.startOn || !filters.endOn) throw new Error('Choose a valid custom date range.')
     params.set('startOn', filters.startOn)
     params.set('endOn', filters.endOn)
   }
-  return `/api/history?${params.toString()}`
+  return `${workspacePath(mode, '/history')}?${params.toString()}`
 }
 
 function periodLabel(period: HistoryPeriod) {
@@ -652,6 +697,7 @@ function historyEntryStatusLabel(entry: Entry) {
   if (entry.replacesId) return 'Corrected replacement'
   if (entry.type === 'income') return 'Income'
   if (entry.type === 'expense') return entry.direction === 'credit' ? 'Expense credit' : 'Expense debit'
+  if (entry.type === 'investment') return 'Investment'
   return 'Adjustment'
 }
 
@@ -804,23 +850,25 @@ function HomeView({
   summary,
   health,
   latestSnapshot,
-  onSeed,
+  onOpenDemo,
   onNavigate,
   latestSalaryMinor,
   onRepeatSalary,
   onOpenForm,
   onSyncBalance,
+  readOnly,
 }: {
   dataset: Dataset | null
   summary: Summary | null
   health: Health | null
   latestSnapshot?: BalanceSyncSnapshot
-  onSeed: () => void
+  onOpenDemo: () => void
   onNavigate: (route: Route) => void
   latestSalaryMinor: number | null
   onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
   onOpenForm: (type?: TransactionKind) => void
   onSyncBalance: (draft: BalanceSyncDraft) => Promise<void>
+  readOnly: boolean
 }) {
   const entries = dataset?.entries ?? []
   const commitments = dataset?.commitments ?? []
@@ -840,12 +888,13 @@ function HomeView({
             currency={currency}
             onRepeatSalary={onRepeatSalary}
             onOpenForm={onOpenForm}
+            readOnly={readOnly}
           />
         }
       />
       <div className="workspace-status">
         <span className={`status-dot ${health ? 'status-dot-online' : ''}`} />
-        {health ? 'Local workspace connected' : 'Connecting to local workspace'}
+        {readOnly ? 'Synthetic preview loaded' : health ? 'Local workspace connected' : 'Connecting to local workspace'}
         <span className="status-separator">·</span>Data stays on this device
       </div>
       <BalanceSyncForm
@@ -853,6 +902,7 @@ function HomeView({
         currency={currency}
         latestSnapshot={latestSnapshot}
         onSync={onSyncBalance}
+        readOnly={readOnly}
       />
       {!hasData ? (
         <section className="panel panel-empty-home">
@@ -860,15 +910,15 @@ function HomeView({
             icon="wallet"
             eyebrow="Your workspace is ready"
             title="Start with a little context."
-            description="Add a salary or your first expense when you are ready. For a safe tour of the shell, load synthetic data first."
+            description="Add a salary or your first expense when you are ready. For a safe tour of the shell, preview synthetic data first."
             primaryLabel="Add salary"
             onPrimary={() => onOpenForm('income')}
             secondaryLabel="Add expense"
             onSecondary={() => onOpenForm('expense')}
           />
           <div className="empty-support">
-            <Button variant="quiet" icon="spark" onClick={onSeed}>
-              Load synthetic workspace
+            <Button variant="quiet" icon="spark" onClick={onOpenDemo}>
+              Preview synthetic workspace
             </Button>
             <Button variant="quiet" onClick={() => onNavigate('transactions')}>
               View transactions
@@ -988,26 +1038,30 @@ function HomeView({
 export function TransactionsView({
   dataset,
   summary,
-  onSeed,
+  onOpenDemo,
   onNavigate,
   latestSalaryMinor,
   onRepeatSalary,
   onOpenForm,
   onRefresh,
+  mode = 'real',
+  referenceOn = todayCivilDate(),
 }: {
   dataset: Dataset | null
   summary: Summary | null
-  onSeed: () => void
+  onOpenDemo: () => void
   onNavigate: (route: Route) => void
   latestSalaryMinor: number | null
   onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
   onOpenForm: (type?: TransactionKind) => void
   onRefresh: () => void
+  mode?: WorkspaceMode
+  referenceOn?: string
 }) {
   const entries = dataset?.entries ?? []
   const currency = dataset?.currency ?? 'INR'
   const [filters, setFilters] = useState<HistoryQuery>(DEFAULT_HISTORY_FILTERS)
-  const currentDate = todayCivilDate()
+  const currentDate = referenceOn
   const [customStartOn, setCustomStartOn] = useState(`${currentDate.slice(0, 7)}-01`)
   const [customEndOn, setCustomEndOn] = useState(currentDate)
   const [customError, setCustomError] = useState<string | null>(null)
@@ -1020,7 +1074,17 @@ export function TransactionsView({
 
   useEffect(() => {
     historyCache.current.clear()
-  }, [dataset?.exportedAt])
+  }, [dataset?.exportedAt, mode])
+
+  useEffect(() => {
+    const defaultStartOn = `${currentDate.slice(0, 7)}-01`
+    setCustomStartOn(defaultStartOn)
+    setCustomEndOn(currentDate)
+    setCustomError(null)
+    setFilters((current) =>
+      current.period === 'custom' ? { ...current, startOn: defaultStartOn, endOn: currentDate } : current,
+    )
+  }, [currentDate, mode])
 
   useEffect(() => {
     const requestId = historyRequestId.current + 1
@@ -1042,7 +1106,7 @@ export function TransactionsView({
 
     setHistoryLoading(true)
     setHistoryError(null)
-    request<HistoryResponse>(historyQueryPath(filters))
+    request<HistoryResponse>(historyQueryPath(filters, mode))
       .then((nextHistory) => {
         if (historyRequestId.current !== requestId) return
         historyCache.current.set(cacheKey, nextHistory)
@@ -1055,7 +1119,7 @@ export function TransactionsView({
       .finally(() => {
         if (historyRequestId.current === requestId) setHistoryLoading(false)
       })
-  }, [dataset?.exportedAt, filters, historyRefreshKey])
+  }, [dataset?.exportedAt, filters, historyRefreshKey, mode])
 
   function selectPeriod(period: HistoryPeriod) {
     setCustomError(null)
@@ -1090,7 +1154,7 @@ export function TransactionsView({
   }
 
   function resetFilters() {
-    const resetDate = todayCivilDate()
+    const resetDate = currentDate
     setCustomStartOn(`${resetDate.slice(0, 7)}-01`)
     setCustomEndOn(resetDate)
     setCustomError(null)
@@ -1119,6 +1183,7 @@ export function TransactionsView({
             currency={currency}
             onRepeatSalary={onRepeatSalary}
             onOpenForm={onOpenForm}
+            readOnly={mode === 'synthetic'}
           />
         }
       />
@@ -1135,8 +1200,8 @@ export function TransactionsView({
             onSecondary={() => onOpenForm('expense')}
           />
           <div className="empty-support">
-            <Button variant="quiet" icon="spark" onClick={onSeed}>
-              Load synthetic workspace
+            <Button variant="quiet" icon="spark" onClick={onOpenDemo}>
+              Preview synthetic workspace
             </Button>
             <Button variant="quiet" onClick={() => onNavigate('home')}>
               Back to overview
@@ -1198,7 +1263,7 @@ export function TransactionsView({
               <div className="transaction-list history-list">
                 {historyGroups.map((group) => (
                   <section className="history-day-group" key={group.date} aria-labelledby={`history-day-${group.date}`}>
-                    <h3 id={`history-day-${group.date}`}>{formatHistoryDay(group.date)}</h3>
+                    <h3 id={`history-day-${group.date}`}>{formatHistoryDay(group.date, referenceOn)}</h3>
                     {group.items.map((item) =>
                       item.kind === 'balance-sync' ? (
                         <HistorySyncRow
@@ -1229,14 +1294,16 @@ export function TransactionsView({
 
 function CommitmentsView({
   dataset,
-  onSeed,
+  onOpenDemo,
   onNavigate,
   onNotice,
+  readOnly,
 }: {
   dataset: Dataset | null
-  onSeed: () => void
+  onOpenDemo: () => void
   onNavigate: (route: Route) => void
   onNotice: (notice: Notice) => void
+  readOnly: boolean
 }) {
   const commitments = dataset?.commitments ?? []
   const currency = dataset?.currency ?? 'INR'
@@ -1250,6 +1317,7 @@ function CommitmentsView({
           <Button
             variant="primary"
             icon="plus"
+            disabled={readOnly}
             onClick={() =>
               onNotice({
                 tone: 'info',
@@ -1268,8 +1336,8 @@ function CommitmentsView({
             eyebrow="Nothing planned yet"
             title="Leave room for future commitments."
             description="SIPs, RDs, subscriptions, and recurring obligations will be kept separate from the transactions you have already made."
-            primaryLabel="Load synthetic workspace"
-            onPrimary={onSeed}
+            primaryLabel="Preview synthetic workspace"
+            onPrimary={onOpenDemo}
             secondaryLabel="Back to overview"
             onSecondary={() => onNavigate('home')}
           />
@@ -1310,16 +1378,22 @@ function CommitmentsView({
 
 function SettingsView({
   health,
-  onSeed,
+  onOpenDemo,
+  onShowGuide,
   onExport,
   onImportClick,
   onReset,
+  onExitDemo,
+  readOnly,
 }: {
   health: Health | null
-  onSeed: () => void
+  onOpenDemo: () => void
+  onShowGuide: () => void
   onExport: () => void
   onImportClick: () => void
   onReset: () => void
+  onExitDemo: () => void
+  readOnly: boolean
 }) {
   return (
     <>
@@ -1340,8 +1414,9 @@ function SettingsView({
             </div>
           </div>
           <p>
-            Your primary ledger lives in a SQLite file on this computer, outside browser storage. Clearing browser data
-            or switching browsers does not remove it.
+            {readOnly
+              ? 'You are viewing deterministic synthetic records. The real SQLite ledger is not being read or changed.'
+              : 'Your primary ledger lives in a SQLite file on this computer, outside browser storage. Clearing browser data or switching browsers does not remove it.'}
           </p>
           <dl className="settings-details">
             <div>
@@ -1353,11 +1428,13 @@ function SettingsView({
             </div>
             <div>
               <dt>Storage mode</dt>
-              <dd>{health?.storage ?? 'SQLite'}</dd>
+              <dd>{health?.storage ?? (readOnly ? 'Synthetic preview' : 'SQLite')}</dd>
             </div>
             <div>
               <dt>Database file</dt>
-              <dd>{health?.databaseFile ?? 'OS application data directory'}</dd>
+              <dd>
+                {health?.databaseFile ?? (readOnly ? 'Not accessed in demo mode' : 'OS application data directory')}
+              </dd>
             </div>
           </dl>
         </section>
@@ -1372,17 +1449,20 @@ function SettingsView({
             </div>
           </div>
           <p>
-            JSON is the lossless backup format. Download it to another drive or import it on another machine when
-            needed.
+            {readOnly
+              ? 'Exit the synthetic preview to access the real workspace backup tools.'
+              : 'JSON is the lossless backup format. Download it to another drive or import it on another machine when needed.'}
           </p>
-          <div className="settings-actions">
-            <Button variant="primary" icon="download" onClick={onExport}>
-              Export JSON backup
-            </Button>
-            <Button variant="secondary" icon="upload" onClick={onImportClick}>
-              Import JSON backup
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="settings-actions">
+              <Button variant="primary" icon="download" onClick={onExport}>
+                Export JSON backup
+              </Button>
+              <Button variant="secondary" icon="upload" onClick={onImportClick}>
+                Import JSON backup
+              </Button>
+            </div>
+          )}
         </section>
         <section className="panel settings-card settings-card-wide">
           <div className="panel-heading">
@@ -1395,20 +1475,46 @@ function SettingsView({
             </div>
           </div>
           <p>
-            Use synthetic records to explore the product safely. Reset removes Margin records only; it does not touch
-            downloaded backups or unrelated files.
+            {readOnly
+              ? 'This preview is read-only. Exit it to manage local records, backups, or preferences.'
+              : 'Use synthetic records to explore the product safely. Reset removes Margin records only; it does not touch downloaded backups or unrelated files.'}
           </p>
           <div className="settings-actions">
-            <Button variant="secondary" icon="spark" onClick={onSeed}>
-              Load synthetic data
-            </Button>
-            <Button variant="danger" icon="reset" onClick={onReset}>
-              Reset local records
-            </Button>
+            {readOnly ? (
+              <Button variant="secondary" icon="reset" onClick={onExitDemo}>
+                Exit synthetic preview
+              </Button>
+            ) : (
+              <>
+                <Button variant="secondary" icon="spark" onClick={onOpenDemo}>
+                  Preview synthetic workspace
+                </Button>
+                <Button variant="quiet" onClick={onShowGuide}>
+                  Show getting started guide
+                </Button>
+                <Button variant="danger" icon="reset" onClick={onReset}>
+                  Reset local records
+                </Button>
+              </>
+            )}
           </div>
         </section>
       </div>
     </>
+  )
+}
+
+function SyntheticDemoBanner({ onExit }: { onExit: () => void }) {
+  return (
+    <div className="synthetic-demo-banner" role="status" aria-live="polite">
+      <div>
+        <strong>Synthetic demo · Read-only</strong>
+        <span>No local records have been changed. Explore the sample, then return to your workspace.</span>
+      </div>
+      <Button variant="secondary" onClick={onExit}>
+        Exit demo
+      </Button>
+    </div>
   )
 }
 
@@ -1417,11 +1523,19 @@ function App() {
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('real')
+  const [demoReferenceOn, setDemoReferenceOn] = useState<string | null>(null)
+  const [workspaceSwitching, setWorkspaceSwitching] = useState<WorkspaceMode | null>(null)
   const [loading, setLoading] = useState(true)
   const [planning, setPlanning] = useState<PlanningResponse | null>(null)
   const [planningLoading, setPlanningLoading] = useState(false)
   const [planningError, setPlanningError] = useState<string | null>(null)
-  const planningCycleKey = todayCivilDate().slice(0, 7)
+  const workspaceRequestId = useRef(0)
+  const planningRequestId = useRef(0)
+  const [guideSeen, setGuideSeen] = useState(() => hasSeenFirstUseGuide())
+  const [guideOpen, setGuideOpen] = useState(false)
+  const referenceOn = demoReferenceOn ?? todayCivilDate()
+  const planningCycleKey = referenceOn.slice(0, 7)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [transactionForm, setTransactionForm] = useState<{ type: TransactionKind } | null>(null)
   const importInput = useRef<HTMLInputElement>(null)
@@ -1432,24 +1546,37 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  async function refresh() {
+  async function refresh(mode: WorkspaceMode = workspaceMode) {
+    const requestId = workspaceRequestId.current + 1
+    workspaceRequestId.current = requestId
     setLoading(true)
     try {
-      const [nextHealth, nextDataset, nextSummary] = await Promise.all([
-        request<Health>('/api/health'),
-        request<Dataset>('/api/dataset'),
-        request<Summary>('/api/summary'),
-      ])
-      setHealth(nextHealth)
-      setDataset(nextDataset)
-      setSummary(nextSummary)
+      if (mode === 'synthetic') {
+        const demo = await request<DemoWorkspaceResponse>('/api/demo')
+        if (workspaceRequestId.current !== requestId) return
+        setHealth(SYNTHETIC_HEALTH)
+        setDataset(demo.dataset)
+        setSummary(demo.summary)
+        setDemoReferenceOn(demo.referenceOn)
+      } else {
+        const [nextHealth, nextDataset, nextSummary] = await Promise.all([
+          request<Health>('/api/health'),
+          request<Dataset>('/api/dataset'),
+          request<Summary>('/api/summary'),
+        ])
+        if (workspaceRequestId.current !== requestId) return
+        setHealth(nextHealth)
+        setDataset(nextDataset)
+        setSummary(nextSummary)
+      }
     } catch (reason) {
+      if (workspaceRequestId.current !== requestId) return
       setNotice({
         tone: 'error',
         text: reason instanceof Error ? reason.message : 'Unable to reach the local Margin service.',
       })
     } finally {
-      setLoading(false)
+      if (workspaceRequestId.current === requestId) setLoading(false)
     }
   }
 
@@ -1457,23 +1584,37 @@ function App() {
     void refresh()
   }, [])
 
+  useEffect(() => {
+    if (!loading && workspaceMode === 'real' && dataset && !workspaceHasData(dataset) && !guideSeen) {
+      markFirstUseGuideSeen()
+      setGuideSeen(true)
+      setGuideOpen(true)
+    }
+  }, [dataset, guideSeen, loading, workspaceMode])
+
   async function loadPlanning() {
+    const requestId = planningRequestId.current + 1
+    planningRequestId.current = requestId
     setPlanningLoading(true)
     setPlanningError(null)
     try {
-      const nextPlanning = await request<PlanningResponse>(`/api/planning-cycles/${planningCycleKey}`)
+      const nextPlanning = await request<PlanningResponse>(
+        workspacePath(workspaceMode, `/planning-cycles/${planningCycleKey}`),
+      )
+      if (planningRequestId.current !== requestId) return
       setPlanning(nextPlanning)
     } catch (reason) {
+      if (planningRequestId.current !== requestId) return
       const message = reason instanceof Error ? reason.message : 'Unable to open the planning workspace.'
       setPlanningError(message)
     } finally {
-      setPlanningLoading(false)
+      if (planningRequestId.current === requestId) setPlanningLoading(false)
     }
   }
 
   useEffect(() => {
     if (route === 'insights') void loadPlanning()
-  }, [route])
+  }, [route, workspaceMode, planningCycleKey])
 
   function navigate(nextRoute: Route) {
     if (nextRoute !== 'home' && nextRoute !== 'transactions') setTransactionForm(null)
@@ -1481,10 +1622,12 @@ function App() {
   }
 
   function openTransactionForm(type: TransactionKind = 'expense') {
+    if (workspaceMode !== 'real' || workspaceSwitching) return
     setTransactionForm({ type })
   }
 
   async function createTransaction(draft: TransactionDraft) {
+    if (workspaceMode !== 'real') throw new Error('Synthetic preview is read-only. Exit the demo to add a transaction.')
     await request('/api/entries', { method: 'POST', body: JSON.stringify(draft) })
     setTransactionForm(null)
     setNotice({
@@ -1500,6 +1643,7 @@ function App() {
   }
 
   async function syncBalance(draft: BalanceSyncDraft) {
+    if (workspaceMode !== 'real') throw new Error('Synthetic preview is read-only. Exit the demo to sync a balance.')
     try {
       const result = await request<{ adjustment: Entry | null }>('/api/reconcile', {
         method: 'POST',
@@ -1521,6 +1665,7 @@ function App() {
   }
 
   async function repeatSalary(draft: SalaryRepeatDraft) {
+    if (workspaceMode !== 'real') return
     try {
       await request('/api/entries', { method: 'POST', body: JSON.stringify(draft) })
       setNotice({ tone: 'success', text: 'Salary added for today.' })
@@ -1531,6 +1676,7 @@ function App() {
   }
 
   async function saveExpectedSalary(input: { expectedSalaryMinor: number; expectedSalaryOn?: string }) {
+    if (workspaceMode !== 'real') throw new Error('Synthetic preview is read-only. Exit the demo to update planning.')
     try {
       const method = planning?.cycle ? 'PUT' : 'POST'
       const path = planning?.cycle ? `/api/planning-cycles/${planningCycleKey}` : '/api/planning-cycles'
@@ -1548,6 +1694,7 @@ function App() {
   }
 
   async function reserveForCycle(draft: ReserveDraft) {
+    if (workspaceMode !== 'real') throw new Error('Synthetic preview is read-only. Exit the demo to reserve money.')
     try {
       await request('/api/collections/commitments', {
         method: 'POST',
@@ -1573,17 +1720,64 @@ function App() {
     }
   }
 
-  async function seedSyntheticData() {
+  async function openSyntheticDemo() {
+    markFirstUseGuideSeen()
+    setGuideSeen(true)
+    setGuideOpen(false)
+    const requestId = workspaceRequestId.current + 1
+    workspaceRequestId.current = requestId
+    setWorkspaceSwitching('synthetic')
     try {
-      await request<Dataset>('/api/seed', { method: 'POST', body: '{}' })
-      setNotice({ tone: 'success', text: 'Synthetic data loaded into the local workspace.' })
-      await refresh()
+      const demo = await request<DemoWorkspaceResponse>('/api/demo')
+      if (workspaceRequestId.current !== requestId) return
+      setWorkspaceMode('synthetic')
+      setDemoReferenceOn(demo.referenceOn)
+      setHealth(SYNTHETIC_HEALTH)
+      setDataset(demo.dataset)
+      setSummary(demo.summary)
+      setPlanning(null)
+      setTransactionForm(null)
+      setNotice({ tone: 'success', text: 'Synthetic preview opened. Your local records were not changed.' })
     } catch (reason) {
-      setNotice({ tone: 'error', text: reason instanceof Error ? reason.message : 'Unable to seed synthetic data.' })
+      if (workspaceRequestId.current !== requestId) return
+      setNotice({ tone: 'error', text: reason instanceof Error ? reason.message : 'Unable to open synthetic preview.' })
+    } finally {
+      if (workspaceRequestId.current === requestId) setWorkspaceSwitching(null)
+    }
+  }
+
+  async function exitSyntheticDemo() {
+    if (workspaceMode !== 'synthetic') return
+    const requestId = workspaceRequestId.current + 1
+    workspaceRequestId.current = requestId
+    setWorkspaceSwitching('real')
+    try {
+      const [nextHealth, nextDataset, nextSummary] = await Promise.all([
+        request<Health>('/api/health'),
+        request<Dataset>('/api/dataset'),
+        request<Summary>('/api/summary'),
+      ])
+      if (workspaceRequestId.current !== requestId) return
+      setWorkspaceMode('real')
+      setDemoReferenceOn(null)
+      setHealth(nextHealth)
+      setDataset(nextDataset)
+      setSummary(nextSummary)
+      setPlanning(null)
+      setNotice({ tone: 'success', text: 'Returned to your local workspace. Synthetic records were discarded.' })
+    } catch (reason) {
+      if (workspaceRequestId.current !== requestId) return
+      setNotice({
+        tone: 'error',
+        text: reason instanceof Error ? reason.message : 'Unable to restore the local workspace. Try again.',
+      })
+    } finally {
+      if (workspaceRequestId.current === requestId) setWorkspaceSwitching(null)
     }
   }
 
   async function exportBackup() {
+    if (workspaceMode !== 'real') return
     try {
       const backup = await request<unknown>('/api/backup')
       const blob = new Blob([JSON.stringify(backup, null, 2) + '\n'], { type: 'application/json' })
@@ -1600,6 +1794,7 @@ function App() {
   }
 
   async function importBackup(event: ChangeEvent<HTMLInputElement>) {
+    if (workspaceMode !== 'real') return
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
@@ -1631,6 +1826,7 @@ function App() {
   }
 
   async function resetData() {
+    if (workspaceMode !== 'real') return
     if (!window.confirm('Reset all Margin local records? Downloaded JSON backups will not be touched.')) return
     try {
       await request<Dataset>('/api/reset', { method: 'POST', body: '{}' })
@@ -1641,9 +1837,22 @@ function App() {
     }
   }
 
+  function dismissGuide() {
+    markFirstUseGuideSeen()
+    setGuideSeen(true)
+    setGuideOpen(false)
+  }
+
+  function showGuide() {
+    markFirstUseGuideSeen()
+    setGuideSeen(true)
+    setGuideOpen(true)
+  }
+
   const activeNavigation = navigation.find((item) => item.key === route) ?? navigation[0]
   const latestSalaryMinor = latestSalary(dataset?.entries ?? [])?.amountMinor ?? null
   const latestSnapshot = latestBalanceSnapshot(dataset?.balanceSnapshots ?? [])
+  const readOnly = workspaceMode === 'synthetic'
 
   return (
     <div className="app-shell">
@@ -1667,8 +1876,8 @@ function App() {
           <div className="storage-pill">
             <span className="status-dot status-dot-online" />
             <span>
-              <strong>Local workspace</strong>
-              <small>{health ? 'Connected and private' : 'Connecting…'}</small>
+              <strong>{readOnly ? 'Synthetic preview' : 'Local workspace'}</strong>
+              <small>{readOnly ? 'Read-only sample data' : health ? 'Connected and private' : 'Connecting…'}</small>
             </span>
           </div>
           <div className="sidebar-footnote">
@@ -1691,7 +1900,7 @@ function App() {
           <div className="topbar-actions">
             <span className="connection-label">
               <span className="status-dot status-dot-online" />
-              Local only
+              {readOnly ? 'Synthetic preview' : 'Local only'}
             </span>
             <a className="icon-button" href="#settings" aria-label="Open settings" onClick={() => navigate('settings')}>
               <Icon name="settings" size={18} />
@@ -1712,7 +1921,11 @@ function App() {
               </button>
             </div>
           )}
-          {transactionForm && (route === 'home' || route === 'transactions') && (
+          {readOnly && <SyntheticDemoBanner onExit={() => void exitSyntheticDemo()} />}
+          {guideOpen && !workspaceSwitching && !readOnly && (
+            <FirstUseGuide onTryDemo={() => void openSyntheticDemo()} onDismiss={dismissGuide} />
+          )}
+          {transactionForm && !readOnly && !workspaceSwitching && (route === 'home' || route === 'transactions') && (
             <TransactionForm
               key={transactionForm.type}
               defaultType={transactionForm.type}
@@ -1721,7 +1934,14 @@ function App() {
               onClose={() => setTransactionForm(null)}
             />
           )}
-          {loading && !dataset ? (
+          {workspaceSwitching ? (
+            <section className="panel loading-panel" role="status">
+              <span className="status-dot status-dot-teal" />
+              {workspaceSwitching === 'synthetic'
+                ? 'Opening the isolated synthetic preview…'
+                : 'Returning to your local workspace…'}
+            </section>
+          ) : loading && !dataset ? (
             <section className="panel loading-panel">
               <span className="status-dot status-dot-teal" />
               Connecting to your local workspace…
@@ -1732,23 +1952,26 @@ function App() {
               summary={summary}
               health={health}
               latestSnapshot={latestSnapshot}
-              onSeed={() => void seedSyntheticData()}
+              onOpenDemo={() => void openSyntheticDemo()}
               onNavigate={navigate}
               latestSalaryMinor={latestSalaryMinor}
               onRepeatSalary={repeatSalary}
               onOpenForm={openTransactionForm}
               onSyncBalance={syncBalance}
+              readOnly={readOnly}
             />
           ) : route === 'transactions' ? (
             <TransactionsView
               dataset={dataset}
               summary={summary}
-              onSeed={() => void seedSyntheticData()}
+              onOpenDemo={() => void openSyntheticDemo()}
               onNavigate={navigate}
               latestSalaryMinor={latestSalaryMinor}
               onRepeatSalary={repeatSalary}
               onOpenForm={openTransactionForm}
               onRefresh={() => void refresh()}
+              mode={workspaceMode}
+              referenceOn={referenceOn}
             />
           ) : route === 'insights' ? (
             <PlanningWorkspace
@@ -1762,21 +1985,26 @@ function App() {
               onSaveSalary={saveExpectedSalary}
               onReserve={reserveForCycle}
               onRetry={() => void loadPlanning()}
+              readOnly={readOnly}
             />
           ) : route === 'commitments' ? (
             <CommitmentsView
               dataset={dataset}
-              onSeed={() => void seedSyntheticData()}
+              onOpenDemo={() => void openSyntheticDemo()}
               onNavigate={navigate}
               onNotice={setNotice}
+              readOnly={readOnly}
             />
           ) : (
             <SettingsView
               health={health}
-              onSeed={() => void seedSyntheticData()}
+              onOpenDemo={() => void openSyntheticDemo()}
+              onShowGuide={showGuide}
               onExport={() => void exportBackup()}
               onImportClick={() => importInput.current?.click()}
               onReset={() => void resetData()}
+              onExitDemo={() => void exitSyntheticDemo()}
+              readOnly={readOnly}
             />
           )}
         </main>

@@ -30,4 +30,4 @@ npm run demo:seed
 npm run demo:reset
 ```
 
-The demo commands use synthetic records only. They create or remove the explicitly ignored `app/public/demo-data.json` file; they do not touch local SQLite persistence or unrelated files. Desktop wrappers and containers remain optional follow-up packaging paths.
+The CLI demo commands use synthetic records only. They create or remove the explicitly ignored `app/public/demo-data.json` file; they do not touch local SQLite persistence or unrelated files. The finance app's first-use `Try synthetic data` action is a separate read-only preview served by `/api/demo`; it is held in memory, uses a fixed mid-month August fixture, and never calls the CLI seed/reset path. Desktop wrappers and containers remain optional follow-up packaging paths.

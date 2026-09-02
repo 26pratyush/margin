@@ -48,6 +48,18 @@ Restore validates the full file, verifies its integrity digest, checks cross-rec
 
 The browser provides download and file-picker based restore, so a backup can be saved outside the application, used after clearing browser data, or imported in another browser or machine. Raw SQLite archives are intentionally out of scope for v0.1.0; they add WAL, locking, and schema portability concerns without improving the browser-based recovery path.
 
+## First-use guide and synthetic preview
+
+The first-use guide stores only the browser preference `margin.first-use-guide.v1=seen` in `localStorage`. This flag controls automatic guide display for that browser installation; it is not part of the ledger, backup, restore, or SQLite dataset. Clearing browser storage may make the guide eligible again, while Settings always provides an explicit refresher.
+
+The application preview uses read-only loopback routes:
+
+- `GET /api/demo` returns the synthetic workspace envelope, including `mode`, `demoVersion`, `referenceOn`, dataset, and calculated summary.
+- `GET /api/demo/history` accepts the same period, type, status, and custom date-range filters as `/api/history`.
+- `GET /api/demo/planning-cycles/:cycleKey` returns the calculated synthetic planning view.
+
+These routes construct a new deterministic fixture in memory and do not read, replace, merge, or write the configured SQLite database. The fixture is anchored to `2026-08-15`, with salary on `2026-08-01` and a planned reserve due on `2026-08-31`. Demo mode is not persisted and is reset by an app restart. The UI labels it as `Synthetic demo · Read-only`, suppresses all mutation and backup controls, and reloads the real dataset only after an explicit exit. CLI seed/reset commands remain developer tooling and are separate from the browser preview.
+
 ## Local recovery snapshots
 
 Before a valid restore, Margin writes a JSON snapshot under the local data directory's `recovery/` folder and keeps the latest three snapshots. These are an automatic safety net for an accidental restore, not a replacement for copying a JSON backup to another drive or machine.
