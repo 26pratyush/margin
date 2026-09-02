@@ -1323,6 +1323,10 @@ a {
   color: var(--color-text);
   font-size: 1rem;
 }
+.table-toolbar h2:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 5px;
+}
 .transaction-list {
   margin-top: 3px;
 }
@@ -1357,6 +1361,20 @@ a {
 .history-entry-voided .activity-copy strong {
   color: var(--color-text-muted);
 }
+.history-entry-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+.history-entry-action {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 0.65rem;
+}
+.history-entry-action-danger {
+  color: var(--color-negative);
+}
 .history-sync-row {
   background: rgba(129, 201, 208, 0.025);
 }
@@ -1381,6 +1399,95 @@ a {
 .history-error p {
   margin: 0;
   color: var(--color-negative);
+}
+.lifecycle-dialog-backdrop {
+  display: grid;
+  position: fixed;
+  z-index: 4;
+  inset: 0;
+  place-items: center;
+  padding: 20px;
+  background: rgba(7, 10, 9, 0.78);
+}
+.lifecycle-dialog {
+  width: min(100%, 650px);
+  max-height: min(90vh, 760px);
+  overflow: auto;
+  border-color: rgba(129, 201, 208, 0.28);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+}
+.lifecycle-dialog-heading {
+  align-items: start;
+}
+.lifecycle-dialog-heading h2 {
+  margin: 7px 0 0;
+  color: var(--color-text);
+  font-size: clamp(1.2rem, 2.4vw, 1.55rem);
+  letter-spacing: -0.035em;
+}
+.lifecycle-dialog-heading h2:focus-visible {
+  outline: 2px solid var(--color-teal);
+  outline-offset: 5px;
+}
+.lifecycle-dialog-heading p:not(.card-label) {
+  max-width: 520px;
+  margin: 10px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+.lifecycle-entry-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  margin-top: 20px;
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: rgba(17, 20, 19, 0.34);
+}
+.lifecycle-entry-summary span,
+.lifecycle-entry-summary small {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+}
+.lifecycle-entry-summary small {
+  font-size: 0.64rem;
+}
+.lifecycle-entry-summary strong {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--color-accent);
+  font-size: 1rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.lifecycle-form {
+  margin-top: 18px;
+}
+.lifecycle-direction {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.lifecycle-direction legend {
+  margin-bottom: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.lifecycle-warning {
+  margin: 0 0 18px;
+  padding: 12px;
+  border: 1px solid rgba(230, 190, 120, 0.22);
+  border-radius: 10px;
+  background: rgba(230, 190, 120, 0.06);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.55;
 }
 .commitment-list {
   margin-top: 12px;
@@ -2301,6 +2408,23 @@ a {
   }
   .form-actions .button {
     flex: 1;
+  }
+  .history-entry-actions {
+    align-self: end;
+    margin-left: auto;
+  }
+  .history-entry-row > .amount-positive,
+  .history-entry-row > .amount-negative,
+  .history-entry-row > .amount-neutral {
+    align-self: start;
+    margin-top: 4px;
+  }
+  .lifecycle-dialog-backdrop {
+    align-items: start;
+    padding: 12px;
+  }
+  .lifecycle-dialog {
+    max-height: calc(100vh - 24px);
   }
   .mobile-nav {
     display: grid;

@@ -50,7 +50,7 @@ The initial release is named `v0.1.0` because the completed scope is an initial-
 
 ## D-010 — Ledger correction is the next smallest product slice
 
-After v0.1.0, the recommended next slice is safe ledger correction: editing or voiding an existing salary or expense with explicit confirmation and recalculated summaries. This improves trust in the local ledger before adding analytics, recurring automation, or hosted integrations. It remains a separate product issue and is not part of the release boundary.
+At the v0.1.0 release review, the recommended next slice was safe ledger correction: editing or voiding an existing salary or expense with explicit confirmation and recalculated summaries. This improves trust in the local ledger before adding analytics, recurring automation, or hosted integrations. It was separate from the v0.1.0 release boundary and is now implemented through EPIC-003/MARGIN-016 through MARGIN-021.
 
 ## D-011 — PolyForm Noncommercial licensing
 
@@ -63,3 +63,7 @@ After the v0.1.0 release, EPIC-003 prioritizes safe correction of ordinary salar
 ## D-013 — Corrections preserve ledger history
 
 Active salary and expense entries are corrected through an atomic void-and-replace command. The original record remains as a terminal voided fact, the replacement carries `replacesId`, and only the active replacement affects balances. Standalone void is also terminal and never hard-deletes or silently reactivates an entry. Commitment links, reconciliation review, duplicate/stale requests, and JSON restore behavior follow [ADR-004 — Ledger correction and entry lifecycle](../docs/decisions/ADR-004-ledger-correction-and-entry-lifecycle.md).
+
+## D-014 — v0.2.0 remains a local core-tracking release
+
+The v0.2.0 release-preparation slice completes everyday trust features without expanding the deployment boundary. The browser consumes service-owned history, planning, demo, correction, void, and reconciliation contracts; the global summary remains independent from filtered subsets; and synthetic onboarding remains isolated from SQLite. The tag and GitHub Release remain pending the MARGIN-021 Pull Request review, merge, and release approval.

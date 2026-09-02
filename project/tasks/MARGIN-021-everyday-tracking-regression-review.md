@@ -26,3 +26,9 @@ Verify the epic as a complete, safe local product slice and record evidence befo
 ## Dependencies and non-goals
 
 Depends on `MARGIN-017` through `MARGIN-020`. Do not weaken coverage thresholds or replace service-boundary assertions with UI-only mocks.
+
+## Implementation record
+
+Release preparation adds the real-workspace Transactions consumer for the existing correction and void commands. Active salary and expense rows expose keyboard-accessible Edit and Void actions; corrections validate the editable-field matrix and optimistic-concurrency timestamp, while voids require a reason and preserve recoverable history. Synthetic mode remains read-only and never renders these actions.
+
+The release regression suite adds a vertical HTTP scenario covering direction-aware entries, month-end reserve planning, reconciliation, correction lineage, voided totals, filtered-history non-mutation, backup restore, and restart persistence. Existing MARGIN-017–020 unit, service/storage, and React coverage was audited rather than bypassed. Verification evidence is recorded in [`docs/TESTING.md`](../../docs/TESTING.md), and the release checklist is in [`docs/RELEASE-v0.2.0.md`](../../docs/RELEASE-v0.2.0.md).

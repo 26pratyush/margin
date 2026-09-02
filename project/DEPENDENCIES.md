@@ -46,6 +46,6 @@ Add automated checks and prove the architecture with the first end-to-end flow: 
 
 ## Wave 4 — Product website and release preparation
 
-Tasks: `MARGIN-009`
+Tasks: `MARGIN-009`, `MARGIN-015`, `MARGIN-021`
 
-Create the static product/demo website structure and connect the eventual `site/` build to GitHub Pages. This can begin with placeholders, but final screenshots depend on a usable local vertical slice.
+`MARGIN-009` creates the static product/demo website and connects the `site/` build to GitHub Pages. `MARGIN-015` records the historical v0.1.0 release boundary. `MARGIN-021` is the current v0.2.0 final regression and release-preparation pass; it depends on the completed everyday-tracking features in EPIC-003 and the independent site gate.

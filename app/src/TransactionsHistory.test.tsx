@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TransactionsView } from './App'
+import type { EntryCorrectionPatch } from './components/EntryLifecycleDialog'
 import { HistoryEntry, HistoryResponse } from './domain/history'
 import { todayCivilDate } from './domain/money'
 
@@ -37,7 +38,12 @@ function response(items: HistoryResponse['items']): HistoryResponse {
 
 function renderTransactions(
   history: HistoryResponse,
-  options: { mode?: 'real' | 'synthetic'; referenceOn?: string } = {},
+  options: {
+    mode?: 'real' | 'synthetic'
+    referenceOn?: string
+    onCorrectEntry?: (entry: HistoryEntry, patch: EntryCorrectionPatch) => Promise<void>
+    onVoidEntry?: (entry: HistoryEntry, reason: string) => Promise<void>
+  } = {},
 ) {
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => history })
   vi.stubGlobal('fetch', fetchMock)
@@ -77,6 +83,8 @@ function renderTransactions(
       onRepeatSalary={vi.fn().mockResolvedValue(undefined)}
       onOpenForm={vi.fn()}
       onRefresh={vi.fn()}
+      onCorrectEntry={options.onCorrectEntry}
+      onVoidEntry={options.onVoidEntry}
       mode={options.mode}
       referenceOn={options.referenceOn}
     />,
@@ -218,5 +226,45 @@ describe('transaction history filters', () => {
     expect(screen.getByText(/Voided · Duplicate/)).toBeInTheDocument()
     expect(screen.getAllByText('Balance sync')).toHaveLength(2)
     expect(screen.getByText(/Needs review/)).toBeInTheDocument()
+  })
+
+  it('offers correction and void actions only for active editable entries and restores focus after cancel', async () => {
+    const user = userEvent.setup()
+    const onCorrectEntry = vi.fn().mockResolvedValue(undefined)
+    const onVoidEntry = vi.fn().mockResolvedValue(undefined)
+    renderTransactions(response([{ kind: 'entry', entry: entry({ name: 'Lunch' }) }]), {
+      onCorrectEntry,
+      onVoidEntry,
+    })
+
+    const correctButton = await screen.findByRole('button', { name: 'Correct Lunch' })
+    expect(screen.getByRole('button', { name: 'Void Lunch' })).toBeInTheDocument()
+    await user.click(correctButton)
+    expect(await screen.findByRole('dialog')).toHaveAccessibleName('Correct this entry.')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(correctButton).toHaveFocus())
+
+    await user.click(correctButton)
+    correctButton.remove()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Filtered history' })).toHaveFocus())
+
+    await user.click(screen.getByRole('button', { name: 'Void Lunch' }))
+    expect(await screen.findByRole('dialog')).toHaveAccessibleName('Void this entry.')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Void Lunch' })).toHaveFocus())
+  })
+
+  it('does not expose lifecycle mutations in synthetic mode', async () => {
+    renderTransactions(response([{ kind: 'entry', entry: entry({ name: 'Synthetic lunch' }) }]), {
+      mode: 'synthetic',
+      referenceOn: '2026-08-15',
+      onCorrectEntry: vi.fn().mockResolvedValue(undefined),
+      onVoidEntry: vi.fn().mockResolvedValue(undefined),
+    })
+
+    await screen.findByText('Synthetic lunch')
+    expect(screen.queryByRole('button', { name: 'Correct Synthetic lunch' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Void Synthetic lunch' })).not.toBeInTheDocument()
   })
 })

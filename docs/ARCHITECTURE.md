@@ -14,7 +14,7 @@ GitHub ── source, issues, PRs, project tracking, Wiki, releases
 GitHub Pages ── static product/demo website only
 ```
 
-## v0.1.0 release boundary
+## Historical v0.1.0 release boundary
 
 The first release is a usable local-first development release, not a hosted finance product. Its public promise is the smallest complete loop: record salary and expenses, plan a calendar month, reserve commitments without rewriting actual cash, understand disposable balance, and recover the local dataset through versioned JSON.
 
@@ -22,7 +22,11 @@ The static site may explain and demonstrate this loop with synthetic values, but
 
 The product website is not the finance application. It must not call a Margin API or connect to the user's financial data.
 
-## Selected v0.1 application shape
+## v0.2.0 release-preparation boundary
+
+MARGIN-016 through MARGIN-021 extend the first local planning loop with safe correction and void lifecycle actions, filtered transaction history, optional expense metadata and explicit credit/debit direction, local balance-sync history, and an isolated first-use guide/demo. These capabilities remain local-only and are being prepared as the `v0.2.0` release; the tag and GitHub Release are still pending final review and merge.
+
+## Current application shape
 
 The finance app is a modular browser application with a local-only service boundary:
 
@@ -46,6 +50,26 @@ Typed persistence/repository interface
 
 The domain layer must not import React or SQLite. UI components must not calculate balances or write directly to the database.
 
+## Service read/write boundaries
+
+The loopback service owns both the authoritative dataset reads and all mutations:
+
+```text
+Browser reads:  /api/dataset, /api/summary, /api/history,
+                /api/planning-cycles/*, /api/collections/commitments,
+                /api/demo, /api/demo/history, /api/demo/planning-cycles/*
+
+Browser writes: /api/entries, /api/entries/:id/correct,
+                /api/entries/:id/void, /api/reconcile,
+                /api/planning-cycles/*, /api/collections/commitments,
+                /api/backup/validate, /api/backup/restore, /api/reset
+
+All real writes → domain command → repository → local SQLite
+Synthetic reads → fresh in-memory fixture → domain calculations
+```
+
+History is a read-only projection over entries and reconciliation snapshots. Its filters and totals never replace the global `/api/summary` calculation. Corrections are atomic void-and-replace commands; standalone void is terminal, and only active entries affect balances. The UI consumes these contracts and never bypasses the service.
+
 ## Domain model direction
 
 The first domain model includes:
@@ -56,6 +80,7 @@ The first domain model includes:
 - `BalanceSnapshot`
 - `PeriodSummary`
 - `PlanningCycle` inputs for a local calendar month
+- History projections with date, type, status, and grouped-day presentation metadata
 
 The model preserves local dates and integer minor-unit amounts as first-class values. Actual ledger entries and planned commitments are separate concepts. Reconciliation snapshots compare calculated actual cash with a real balance and create explicit adjustment entries for the difference.
 

@@ -2,6 +2,10 @@
 
 This is the canonical handoff document for anyone working on Margin in a separate chat or issue.
 
+## Current status
+
+`v0.1.0` is the published first local planning release. EPIC-003/MARGIN-016 through MARGIN-021 now form the v0.2.0 core-tracking release candidate, covering correction and void lifecycle, filtered history, progressive expense metadata, balance sync, isolated onboarding/demo, and final regression review. The v0.2.0 tag and GitHub Release remain pending Pull Request merge and maintainer approval.
+
 ## One-sentence description
 
 Margin is a minimalist, local-first personal finance tracker that shows what money is available, what is committed, and what has already been spent.
@@ -34,7 +38,7 @@ At any point in a calendar month, the user should be able to answer:
 
 ## Product boundaries
 
-### v0.1.0 scope
+### Historical v0.1.0 scope
 
 - Monthly salary and income entries.
 - One-time expenses.
@@ -46,10 +50,15 @@ At any point in a calendar month, the user should be able to answer:
 - Local JSON export, validation, restore, reconciliation, and safe reset.
 - Static public product/demo website.
 
+### v0.2.0 core-tracking additions
+
+- History filters and richer entry-history presentation are implemented by MARGIN-018 as a read-only local projection; correction and void commands are implemented at the service boundary by MARGIN-017, and the real-workspace Transactions UI consumes those commands through MARGIN-021. They remain the only posted-entry mutation path.
+- Progressive expense metadata is implemented by MARGIN-019; missing names and categories remain absent in stored records and use deterministic presentation fallbacks.
+- Local balance sync is available from Overview through the reconciliation boundary; it creates one signed adjustment for a non-zero difference or a zero-difference snapshot.
+- The first-use guide and isolated synthetic preview are implemented by MARGIN-020; the preview is anchored to `2026-08-15`, uses a reserve due on `2026-08-31`, and never touches real SQLite data.
+
 ### Later roadmap work
 
-- History filters and richer entry-history presentation are implemented by MARGIN-018 as a read-only local projection; correction and void commands are implemented at the service boundary by MARGIN-017 and remain the only posted-entry mutation path.
-- Progressive expense metadata is implemented by MARGIN-019; missing names and categories remain absent in stored records and use deterministic presentation fallbacks.
 - Recurring commitment automation.
 - Charts, trend views, and broad insights.
 
@@ -84,12 +93,12 @@ At any point in a calendar month, the user should be able to answer:
 - GitHub is the source of truth for code, documentation, issues, epics, and pull requests.
 - GitHub Pages hosts only the static product/demo website.
 - The app and demo site live in separate top-level directories in one repository unless a later decision changes that.
-- The static product/demo site will deploy from `site/` to GitHub Pages through GitHub Actions; the finance app has no hosted deployment boundary.
+- The static product/demo site deploys from `site/` to GitHub Pages through GitHub Actions; the finance app has no hosted deployment boundary.
 - Containers are optional local development and packaging tooling. The browser runtime is selected; any reproducible Docker or Podman setup belongs to `MARGIN-004`.
 - Versioned releases use Git tags and GitHub Releases. Public container images are optional and must contain no personal data.
 - `v0.1.0` is the first coherent local planning release; it communicates initial-development status rather than a percentage of product completion. Public data and API contracts remain subject to stabilization before v1.0.0.
-- The v0.1 finance app is a browser-based local SPA served from `localhost`.
-- The v0.1.0 UI stack is React, TypeScript, and Vite on Node.js 24 LTS with npm.
+- The finance app is a browser-based local SPA served from `localhost`.
+- The current UI stack is React, TypeScript, and Vite on Node.js 24 LTS with npm.
 - The repository root provides the canonical npm workspace commands; `app/` contains the finance application and `site/` remains an independent website boundary.
 - Local persistence uses a loopback-only Node service with a file-backed SQLite database behind a typed repository interface; there is no sync or hosted database.
 - JSON is the lossless backup format and CSV is a secondary interoperability export.
@@ -103,8 +112,9 @@ At any point in a calendar month, the user should be able to answer:
 - The first-use guide is a browser-local UI preference, stored as versioned `margin.first-use-guide.v1=seen`; it is not ledger data, is not exported or backed up, and Settings can reopen it.
 - The synthetic first-use preview is a read-only local mode. `GET /api/demo`, `GET /api/demo/history`, and `GET /api/demo/planning-cycles/:cycleKey` construct fresh deterministic in-memory data and never open or mutate SQLite. The browser does not call `/api/seed` for user-facing demo actions.
 - Synthetic mode uses fixture version 1 and reference date `2026-08-15`: salary is on August 1, early-month movement is visible, and the planned reserve is due on August 31. It is not persisted; every restart begins in the real workspace. The UI keeps a `Synthetic demo · Read-only` banner and requires an explicit exit before real data is shown again.
+- Active salary and expense history rows expose explicit correction and void actions only in the real workspace. Corrections use the service's optimistic-concurrency timestamp and voids require a reason; voided records remain recoverable history and never contribute to active totals.
 - Financial dates remain canonical as ISO `YYYY-MM-DD` in storage, domain values, APIs, and backups; the UI formats them for the user's locale, including `DD/MM/YYYY` for India.
-- v0.1 uses one local ledger currency, defaulting to INR with two decimal places, and does not support FX conversion.
+- The current local ledger uses one currency, defaulting to INR with two decimal places, and does not support FX conversion.
 
 ## Open decisions
 
