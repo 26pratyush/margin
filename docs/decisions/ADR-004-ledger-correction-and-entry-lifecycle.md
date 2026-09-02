@@ -164,4 +164,4 @@ If a snapshot as of `2026-08-31` included a ₹100 expense, correcting it to ₹
 
 ## Implementation boundary
 
-`MARGIN-016` records this decision and does not change application behavior. `MARGIN-017` implements the dedicated service commands, validation, atomic persistence, link handling, reconciliation review marking, and backup compatibility. Later issues may add the UI, history filters, and progressive metadata presentation, but they must consume this contract rather than redefine it.
+`MARGIN-016` records this decision. `MARGIN-017` implements the dedicated service commands, validation, atomic persistence, link handling, reconciliation review marking, and backup compatibility. MARGIN-018 and MARGIN-019 consume the contract for history and progressive metadata, while MARGIN-021 provides the real-workspace UI consumer and regression evidence; none of these layers redefine the lifecycle rules.

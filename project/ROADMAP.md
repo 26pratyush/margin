@@ -4,7 +4,7 @@ The roadmap is intentionally outcome-based. Dates should be added only when ther
 
 ## v0.1 — First local planning release
 
-Status: Released as [`v0.1.0`](https://github.com/26pratyush/margin/releases/tag/v0.1.0) on 2026-08-26. The [static product website](https://26pratyush.github.io/margin/) is live; interactive browser review remains a documented follow-up.
+Status: Released as [`v0.1.0`](https://github.com/26pratyush/margin/releases/tag/v0.1.0) on 2026-08-26. The [static product website](https://26pratyush.github.io/margin/) is live. Interactive browser review was unavailable in that release environment and remains documented as historical evidence.
 
 - Confirm the local-first boundary.
 - Choose the application stack and persistence approach.
@@ -14,11 +14,12 @@ Status: Released as [`v0.1.0`](https://github.com/26pratyush/margin/releases/tag
 
 ## v0.2 — Core tracking
 
-Status: Planned as [EPIC-003 — Everyday tracking, safe ledger correction, and onboarding](epics/EPIC-003-everyday-tracking-and-safe-ledger-correction.md), beginning with safe correction before analytics or integrations.
+Status: In final release preparation through [EPIC-003 — Everyday tracking, safe ledger correction, and onboarding](epics/EPIC-003-everyday-tracking-and-safe-ledger-correction.md); the v0.2 tag remains pending MARGIN-021 sign-off.
 
 - Define and implement safe editing/voiding for active salary and expense entries.
 - Add weekly/monthly transaction history filters without changing global balances.
 - Make expense name and category progressive metadata with an explicit uncategorized state.
+- Add local balance sync with an explicit adjustment or zero-difference snapshot.
 - Add a concise first-use guide and isolated synthetic demo mode.
 - Re-run the full local-first regression and accessibility review for the expanded everyday flow.
 

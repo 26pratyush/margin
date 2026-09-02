@@ -2,6 +2,8 @@
 
 GitHub source: [Epic #38](https://github.com/26pratyush/margin/issues/38)
 
+Status: In final `v0.2.0` release preparation through MARGIN-021; pending Pull Request merge and release approval.
+
 ## Outcome
 
 Make Margin trustworthy and low-friction for everyday use after the v0.1.0 planning release: users can correct an honest ledger mistake safely, review activity over useful periods, record a lightweight expense without forced metadata, and understand the local app through a synthetic first-use path.
@@ -67,7 +69,7 @@ The scope and deferred ideas below are the durable project record for this epic;
 - Optional expense name/category: included narrowly in `MARGIN-019`, with an explicit uncategorized state.
 - Tutorial with synthetic starting values: included narrowly in `MARGIN-020`, only with isolated local state.
 - Skills and better Actions workflows: deferred to a separate developer-workflow epic.
-- Data storage/model, JSON recovery, locker, release preparation, regression foundation, and licensing: delivered in v0.1.0; future changes must remain backward-compatible and issue-scoped.
+- Data storage/model, JSON recovery, locker, licensing, and the first release boundary were delivered in v0.1.0. The current MARGIN-016 through MARGIN-021 work delivers everyday-tracking trust features and the final v0.2.0 regression/release-preparation pass; future changes must remain backward-compatible and issue-scoped.
 
 ## Sequence
 

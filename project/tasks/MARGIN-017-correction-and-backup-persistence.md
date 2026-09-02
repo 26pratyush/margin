@@ -31,6 +31,6 @@ Depends on `MARGIN-016`. Do not expose generic collection deletion as the UX, an
 
 ## Implementation record
 
-Implemented on `codex/MARGIN-017-safe-correction-persistence` with dedicated service correction/void commands, atomic SQLite lifecycle transitions, v3 legacy timestamp migration, commitment and reconciliation handling, and backup-compatible lineage validation. The implementation intentionally leaves React history/edit UI for later consumers of this service contract.
+Implemented on `codex/MARGIN-017-safe-correction-persistence` with dedicated service correction/void commands, atomic SQLite lifecycle transitions, v3 legacy timestamp migration, commitment and reconciliation handling, and backup-compatible lineage validation. The service contract was consumed by the real-workspace Transactions UI during MARGIN-021 release preparation; the UI still routes all posted-entry changes through these dedicated commands.
 
 Verification: `npm run quality` passed on 2026-08-29 with 64 service tests, 22 UI tests, service coverage above all configured floors, TypeScript checks, and production build. Synthetic data only.

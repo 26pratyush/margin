@@ -15,7 +15,7 @@ Prove the full local loop with the smallest meaningful feature: add salary, add 
 ## Acceptance criteria
 
 - Salary can be created and persisted locally.
-- Expense can be created with a required amount, category, and date.
+- Original v0.1.0 contract: expense can be created with a required amount, category, and date.
 - The dashboard reflects the new records without requiring a reload if the chosen runtime supports it.
 - The remaining balance calculation is covered by tests.
 - Empty, invalid, and zero-value states are intentional.
@@ -24,3 +24,7 @@ Prove the full local loop with the smallest meaningful feature: add salary, add 
 ## Out of scope
 
 Recurring expenses, SIP/RD automation, advanced charts, bank integrations, and multi-account support.
+
+## Historical compatibility note
+
+This brief records the original v0.1.0 vertical-slice acceptance criteria. Later EPIC-003 work made expense metadata optional and added explicit debit/credit direction; current expense behavior is documented in [the project context](../../docs/PROJECT_CONTEXT.md) and [local data guidance](../../docs/LOCAL_DATA.md).

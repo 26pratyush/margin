@@ -2,6 +2,8 @@
 
 This file records the small amount of authenticated GitHub setup that remains after the repository files are prepared.
 
+> Historical one-time checklist: the repository, project, epics, and initial task issues are already initialized. The current active work is EPIC-003 and v0.2.0 release preparation; do not repeat the publish, first-epic, or first-task commands below on an existing checkout.
+
 ## 1. Publish the local foundation
 
 Run these commands from the repository root after authenticating GitHub locally:

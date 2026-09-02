@@ -126,6 +126,21 @@ Isolation result: the temporary-data smoke flow confirmed an empty real dataset 
 UI result: visible synthetic labeling, mid-month content, history grouping, guide persistence, fixed-date filters, reduced-motion-safe CSS, responsive layout rules, and direct read-only form coverage passed in Vitest/Testing Library. Interactive desktop/mobile/screen-reader browser control was unavailable in this session; deterministic component and service coverage provide the automated evidence.
 Privacy result: no real financial data, credentials, external API, hosted persistence, SQLite schema change, or backup-format change was introduced. The browser guide preference is not included in ledger backup/export.
 
+### MARGIN-021 everyday-tracking regression and release-preparation record
+
+Verification date: 2026-09-02
+Branch: `codex/MARGIN-021-everyday-tracking-regression-review` (working tree; commit intentionally pending maintainer review)
+Runtime: Node.js 26.5.0, npm 11.17.0, Vite 8.2.1, synthetic temporary data directory under `/private/tmp`
+Automated result: `npm run quality` passed with 81 service tests, 53 UI tests, TypeScript validation, lint, formatting, production app build, and service coverage at 94.00% lines, 83.21% branches, and 97.69% functions. The independent `site/` gate passed with locked dependency install, format check, TypeScript check, 3 site tests, and production build.
+Regression result: the added vertical HTTP scenario passed salary and debit/credit expense creation, month-end reserve due on `2026-08-31`, reconciliation adjustment, correction void-and-replace lineage, voided totals, filtered-history non-mutation, JSON backup restore, and restart persistence. Existing MARGIN-017–020 coverage also passed for Monday/week and leap-date boundaries, optional metadata, legacy migration, stale/duplicate commands, commitment and reconciliation dependencies, onboarding state, and synthetic API isolation.
+UI result: active real-workspace salary and expense rows expose accessible Edit and Void actions; correction validates amount/date and the type-specific editable-field matrix, void requires a reason, service conflicts preserve the dialog, cancellation restores focus, and synthetic mode exposes neither mutation. The UI suite also covered filters, grouped civil-day history, empty/loading/error states, optional fields, onboarding, keyboard operation, and demo read-only boundaries.
+Synthetic result: a fresh `MARGIN_DATA_DIR` smoke flow confirmed demo reads leave the real dataset empty, then exercised real synthetic entries, correction, void, zero-difference sync, history, backup validation, reset/restore, and restart. It reported `demo: isolated`, `correction: void-and-replace`, `void: recoverable`, `sync: zero-difference`, four history items, three restored entries, and reserve due on `2026-08-31`.
+Browser result: interactive desktop/mobile/screen-reader control was unavailable in this session. Deterministic React tests, semantic roles/labels, focus restoration, responsive CSS, and the reduced-motion boundary passed; an interactive browser pass remains the final human release checklist item when browser control is available.
+Release decision: local code and automated release gates are ready for commit and PR review. Do not tag or publish v0.2.0 until the branch is reviewed and merged, the remaining interactive browser pass is completed or explicitly accepted, and the maintainer approves release publication.
+Privacy result: no real financial data, credentials, external API, hosted persistence, schema migration, or backup-format change was introduced.
+
+Documentation result: a repository-wide Markdown audit covered the root/app/site READMEs, architecture and deployment boundaries, project context/roadmap/tracking/task briefs, contribution and GitHub workflow guidance, Wiki pages, privacy guidance, and release records. Current v0.2.0 behavior and release status are now reflected consistently; v0.1.0 acceptance/release records and the one-time bootstrap checklist are explicitly labelled historical. `npm run format:check`, `git diff --check`, the root quality gate, and the independent site gate passed after the documentation updates.
+
 ## Coverage policy
 
 The current service coverage floors are intentionally modest but regression-oriented:

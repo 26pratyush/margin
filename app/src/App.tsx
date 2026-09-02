@@ -1,5 +1,6 @@
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react'
 import { BalanceSyncDraft, BalanceSyncForm, BalanceSyncSnapshot } from './components/BalanceSyncForm'
+import { EntryCorrectionPatch, EntryLifecycleDialog, EntryLifecycleMode } from './components/EntryLifecycleDialog'
 import { FirstUseGuide } from './components/FirstUseGuide'
 import { PlanningResponse, PlanningWorkspace, ReserveDraft } from './components/PlanningWorkspace'
 import { SalaryRepeatButton, SalaryRepeatDraft } from './components/SalaryRepeatButton'
@@ -701,14 +702,20 @@ function historyEntryStatusLabel(entry: Entry) {
   return 'Adjustment'
 }
 
+function entryCanBeManaged(entry: Entry) {
+  return entry.status === 'active' && (entry.type === 'income' || entry.type === 'expense')
+}
+
 function HistoryEntryRow({
   entry,
   currency,
   categories,
+  onAction,
 }: {
   entry: Entry
   currency: string
   categories: Dataset['categories']
+  onAction?: (mode: EntryLifecycleMode, entry: Entry, trigger: HTMLButtonElement) => void
 }) {
   const positive = entryIsCredit(entry)
   const voided = entry.status === 'voided'
@@ -723,6 +730,26 @@ function HistoryEntryRow({
         {entry.type === 'expense' && <small>Category: {entryCategoryLabel(entry, categories)}</small>}
         {entry.replacedById && <small>Replaced by a corrected entry</small>}
       </div>
+      {onAction && entryCanBeManaged(entry) && (
+        <div className="history-entry-actions">
+          <button
+            type="button"
+            className="button button-quiet history-entry-action"
+            aria-label={`Correct ${entryLabel(entry, categories)}`}
+            onClick={(event) => onAction('correct', entry, event.currentTarget)}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="button button-quiet history-entry-action history-entry-action-danger"
+            aria-label={`Void ${entryLabel(entry, categories)}`}
+            onClick={(event) => onAction('void', entry, event.currentTarget)}
+          >
+            Void
+          </button>
+        </div>
+      )}
       <strong className={positive ? 'amount-positive' : 'amount-negative'}>{amountLabel(entry, currency)}</strong>
     </div>
   )
@@ -1044,6 +1071,8 @@ export function TransactionsView({
   onRepeatSalary,
   onOpenForm,
   onRefresh,
+  onCorrectEntry,
+  onVoidEntry,
   mode = 'real',
   referenceOn = todayCivilDate(),
 }: {
@@ -1055,6 +1084,8 @@ export function TransactionsView({
   onRepeatSalary: (draft: SalaryRepeatDraft) => Promise<void>
   onOpenForm: (type?: TransactionKind) => void
   onRefresh: () => void
+  onCorrectEntry?: (entry: Entry, patch: EntryCorrectionPatch) => Promise<void>
+  onVoidEntry?: (entry: Entry, reason: string) => Promise<void>
   mode?: WorkspaceMode
   referenceOn?: string
 }) {
@@ -1071,6 +1102,12 @@ export function TransactionsView({
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
   const historyCache = useRef(new Map<string, HistoryResponse>())
   const historyRequestId = useRef(0)
+  const [lifecycleAction, setLifecycleAction] = useState<{
+    mode: EntryLifecycleMode
+    entry: Entry
+  } | null>(null)
+  const lifecycleTrigger = useRef<HTMLButtonElement | null>(null)
+  const historyHeadingRef = useRef<HTMLHeadingElement | null>(null)
 
   useEffect(() => {
     historyCache.current.clear()
@@ -1168,6 +1205,22 @@ export function TransactionsView({
     onRefresh()
   }
 
+  function openLifecycleAction(actionMode: EntryLifecycleMode, entry: Entry, trigger: HTMLButtonElement) {
+    lifecycleTrigger.current = trigger
+    setLifecycleAction({ mode: actionMode, entry })
+  }
+
+  function closeLifecycleAction() {
+    const trigger = lifecycleTrigger.current
+    const fallback = historyHeadingRef.current
+    lifecycleTrigger.current = null
+    setLifecycleAction(null)
+    window.setTimeout(() => {
+      if (trigger?.isConnected) trigger.focus()
+      else fallback?.focus()
+    }, 0)
+  }
+
   const historyItems = history?.items ?? []
   const historyGroups = groupHistoryItems(historyItems)
   const hasHistory = entries.length > 0 || (dataset?.balanceSnapshots.length ?? 0) > 0
@@ -1227,7 +1280,9 @@ export function TransactionsView({
           <section className="panel table-panel">
             <div className="table-toolbar">
               <div>
-                <h2>Filtered history</h2>
+                <h2 ref={historyHeadingRef} tabIndex={-1}>
+                  Filtered history
+                </h2>
                 <p>
                   {history
                     ? `${history.summary.visibleCount} history ${history.summary.visibleCount === 1 ? 'item' : 'items'} · ${periodLabel(history.filters.period)}`
@@ -1278,6 +1333,7 @@ export function TransactionsView({
                           entry={item.entry}
                           currency={currency}
                           categories={dataset?.categories ?? []}
+                          onAction={mode === 'real' && onCorrectEntry && onVoidEntry ? openLifecycleAction : undefined}
                         />
                       ),
                     )}
@@ -1287,6 +1343,17 @@ export function TransactionsView({
             )}
           </section>
         </>
+      )}
+      {lifecycleAction && mode === 'real' && onCorrectEntry && onVoidEntry && (
+        <EntryLifecycleDialog
+          entry={lifecycleAction.entry}
+          mode={lifecycleAction.mode}
+          categories={dataset?.categories ?? []}
+          currency={currency}
+          onCorrect={(patch) => onCorrectEntry(lifecycleAction.entry, patch)}
+          onVoid={(reason) => onVoidEntry(lifecycleAction.entry, reason)}
+          onClose={closeLifecycleAction}
+        />
       )}
     </>
   )
@@ -1642,6 +1709,50 @@ function App() {
     await refresh()
   }
 
+  async function correctLedgerEntry(entry: Entry, patch: EntryCorrectionPatch) {
+    if (workspaceMode !== 'real') throw new Error('Synthetic preview is read-only. Exit the demo to correct an entry.')
+    const expectedUpdatedAt = entry.updatedAt ?? entry.createdAt
+    if (!expectedUpdatedAt) throw new Error('This entry is missing its version timestamp. Refresh and try again.')
+    try {
+      await request(`/api/entries/${encodeURIComponent(entry.id)}/correct`, {
+        method: 'POST',
+        body: JSON.stringify({
+          operationId: globalThis.crypto.randomUUID(),
+          expectedUpdatedAt,
+          patch,
+        }),
+      })
+      setNotice({ tone: 'success', text: 'Entry corrected. Active balances and planning were recalculated.' })
+      await refresh()
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'Unable to correct this entry.'
+      setNotice({ tone: 'error', text: message })
+      throw new Error(message, { cause: reason })
+    }
+  }
+
+  async function voidLedgerEntry(entry: Entry, reason: string) {
+    if (workspaceMode !== 'real') throw new Error('Synthetic preview is read-only. Exit the demo to void an entry.')
+    const expectedUpdatedAt = entry.updatedAt ?? entry.createdAt
+    if (!expectedUpdatedAt) throw new Error('This entry is missing its version timestamp. Refresh and try again.')
+    try {
+      await request(`/api/entries/${encodeURIComponent(entry.id)}/void`, {
+        method: 'POST',
+        body: JSON.stringify({
+          operationId: globalThis.crypto.randomUUID(),
+          expectedUpdatedAt,
+          reason,
+        }),
+      })
+      setNotice({ tone: 'success', text: 'Entry voided. It remains in history but no longer affects active balances.' })
+      await refresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to void this entry.'
+      setNotice({ tone: 'error', text: message })
+      throw new Error(message, { cause: error })
+    }
+  }
+
   async function syncBalance(draft: BalanceSyncDraft) {
     if (workspaceMode !== 'real') throw new Error('Synthetic preview is read-only. Exit the demo to sync a balance.')
     try {
@@ -1970,6 +2081,8 @@ function App() {
               onRepeatSalary={repeatSalary}
               onOpenForm={openTransactionForm}
               onRefresh={() => void refresh()}
+              onCorrectEntry={correctLedgerEntry}
+              onVoidEntry={voidLedgerEntry}
               mode={workspaceMode}
               referenceOn={referenceOn}
             />

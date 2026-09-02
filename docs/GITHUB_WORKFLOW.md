@@ -56,12 +56,13 @@ The initial GitHub Project should contain:
 
 ## Merge rule
 
-`main` represents the most stable state. A Pull Request should link its issue and pass the checks that exist for the current stack. The `Local app check / Verify local app` workflow runs the locked install, formatting check, lint, service/domain tests with coverage thresholds, TypeScript check, static build, and synthetic demo seed/reset path for every pull request and push to `main`. Do not merge real financial data, credentials, or unreviewed schema changes.
+`main` represents the most stable state. A Pull Request should link its issue and pass the checks that exist for the current stack. The `Local app check / Verify local app` workflow runs the locked install, formatting check, lint, service/domain tests with coverage thresholds, TypeScript check, static build, and synthetic demo seed/reset path for every pull request and push to `main`. MARGIN-021 also verifies the UI regression suite and a public HTTP vertical slice covering lifecycle, history, reconciliation, backup/restore, and restart behavior. Do not merge real financial data, credentials, or unreviewed schema changes.
 
 ## Deployment and releases
 
 - Pull Requests validate the changed app or site without deploying the finance application.
-- The `site/` build is verified by the product-site workflow, and pushes to `main` publish the static site to GitHub Pages through GitHub Actions.
+- The `site/` build is verified independently with formatting, type-check, test, and production-build gates; pushes to `main` publish the static site to GitHub Pages through GitHub Actions.
 - The finance application remains local-only; GitHub Pages must never receive its database or user records.
 - Versioned releases use `v0.x.y` tags and GitHub Releases. Container images are optional packaging artifacts, not a hosted runtime.
+- The current v0.2.0 release-preparation evidence and pending sign-off are recorded in [RELEASE-v0.2.0](RELEASE-v0.2.0.md).
 - Protect `main` with required pull requests and CI checks once a repeatable workflow exists; do not require a check that has not been created yet.

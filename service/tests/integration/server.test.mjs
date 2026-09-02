@@ -401,6 +401,134 @@ test('returns deterministic command errors for missing, invalid, stale, and repe
   }
 })
 
+test('keeps the release vertical slice consistent across correction, sync, filters, restore, and restart', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-release-regression-test-'))
+  let context = await startServer(directory)
+  try {
+    const create = (body) =>
+      fetch(`${context.url}/api/entries`, {
+        method: 'POST',
+        headers: clientHeaders(),
+        body: JSON.stringify(body),
+      }).then((response) => response.json())
+
+    const salary = await create({ type: 'income', amountMinor: 10000000, occurredOn: '2026-08-01', source: 'Salary' })
+    const debit = await create({
+      type: 'expense',
+      amountMinor: 200000,
+      occurredOn: '2026-08-03',
+      name: 'Groceries',
+      categoryName: 'Living',
+    })
+    const credit = await create({
+      type: 'expense',
+      amountMinor: 50000,
+      occurredOn: '2026-08-05',
+      direction: 'credit',
+      note: 'Merchant refund',
+    })
+    const planningCycle = await fetch(`${context.url}/api/planning-cycles`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ cycleKey: '2026-08', expectedSalaryMinor: 10000000, expectedSalaryOn: '2026-08-01' }),
+    }).then((response) => response.json())
+    const reserve = await fetch(`${context.url}/api/collections/commitments`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        id: 'release-reserve',
+        kind: 'saving',
+        name: 'Month-end reserve',
+        plannedAmountMinor: 3000000,
+        dueOn: '2026-08-31',
+        status: 'planned',
+        linkedEntryIds: [],
+      }),
+    }).then((response) => response.json())
+
+    const sync = await fetch(`${context.url}/api/reconcile`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({ asOf: '2026-08-15', realBalanceMinor: 9950000, note: 'Mid-month check' }),
+    }).then((response) => response.json())
+    const corrected = await fetch(`${context.url}/api/entries/${debit.entry.id}/correct`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'release-correction-1',
+        expectedUpdatedAt: debit.entry.updatedAt,
+        patch: { amountMinor: 150000, occurredOn: '2026-08-04', note: 'Corrected groceries' },
+      }),
+    }).then((response) => response.json())
+    const voided = await fetch(`${context.url}/api/entries/${credit.entry.id}/void`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify({
+        operationId: 'release-void-1',
+        expectedUpdatedAt: credit.entry.updatedAt,
+        reason: 'Duplicate refund import',
+      }),
+    }).then((response) => response.json())
+
+    assert.equal(salary.entry.type, 'income')
+    assert.equal(planningCycle.cycle.cycleKey, '2026-08')
+    assert.equal(reserve.dueOn, '2026-08-31')
+    assert.equal(sync.adjustment.direction, 'credit')
+    assert.equal(sync.adjustment.amountMinor, 100000)
+    assert.equal(corrected.original.status, 'voided')
+    assert.equal(corrected.replacement.amountMinor, 150000)
+    assert.equal(voided.entry.status, 'voided')
+    assert.equal(voided.summary.actualBalanceMinor, 9950000)
+    assert.equal(voided.summary.expenseMinor, 150000)
+    assert.equal(voided.summary.expenseCreditMinor, 0)
+
+    const beforeHistory = await fetch(`${context.url}/api/summary`).then((response) => response.json())
+    const activeHistory = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-01&endOn=2026-08-16&type=all&status=active`,
+    ).then((response) => response.json())
+    const allExpenseHistory = await fetch(
+      `${context.url}/api/history?period=custom&startOn=2026-08-01&endOn=2026-08-16&type=expense&status=all`,
+    ).then((response) => response.json())
+    const afterHistory = await fetch(`${context.url}/api/summary`).then((response) => response.json())
+
+    assert.equal(activeHistory.items.filter((item) => item.kind === 'balance-sync').length, 1)
+    assert.equal(activeHistory.items.filter((item) => item.kind === 'entry').length, 2)
+    assert.equal(activeHistory.summary.netMovementMinor, 9950000)
+    assert.equal(allExpenseHistory.items.filter((item) => item.kind === 'entry').length, 3)
+    assert.equal(allExpenseHistory.summary.voidedCount, 2)
+    assert.equal(
+      allExpenseHistory.items.some((item) => item.kind === 'balance-sync'),
+      false,
+    )
+    assert.deepEqual(afterHistory, beforeHistory)
+
+    const backup = await fetch(`${context.url}/api/backup`).then((response) => response.json())
+    await fetch(`${context.url}/api/reset`, { method: 'POST', headers: clientHeaders(), body: '{}' })
+    const restored = await fetch(`${context.url}/api/backup/restore`, {
+      method: 'POST',
+      headers: clientHeaders(),
+      body: JSON.stringify(backup),
+    }).then((response) => response.json())
+    assert.equal(restored.summary.recoverySnapshotCreated, true)
+    assert.equal(restored.dataset.commitments[0].dueOn, '2026-08-31')
+    assert.equal(restored.dataset.entries.find((entry) => entry.id === debit.entry.id).status, 'voided')
+    assert.equal(restored.dataset.entries.find((entry) => entry.id === corrected.replacement.id).status, 'active')
+
+    await new Promise((resolve) => context.server.close(resolve))
+    context = await startServer(directory)
+    const restartedDataset = await fetch(`${context.url}/api/dataset`).then((response) => response.json())
+    const restartedSummary = await fetch(`${context.url}/api/summary`).then((response) => response.json())
+    assert.equal(restartedDataset.entries.length, 5)
+    assert.equal(restartedDataset.balanceSnapshots.length, 1)
+    assert.equal(restartedDataset.entries.find((entry) => entry.id === credit.entry.id).status, 'voided')
+    assert.equal(restartedSummary.actualBalanceMinor, beforeHistory.actualBalanceMinor)
+    assert.equal(restartedSummary.disposableBalanceMinor, beforeHistory.disposableBalanceMinor)
+  } finally {
+    await new Promise((resolve) => context.server.close(resolve))
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
 test('creates and updates a planning cycle through the service boundary', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'margin-http-planning-test-'))
   const context = await startServer(directory)

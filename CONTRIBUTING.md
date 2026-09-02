@@ -26,6 +26,8 @@ npm run quality
 
 The quality command runs formatting, linting, service/domain tests with coverage thresholds, TypeScript validation, and the production build. Keep unit tests separate from storage/HTTP integration tests as described in [Testing and quality gates](docs/TESTING.md).
 
+For focused iteration, use `npm run test:service` for the Node service/domain suite and `npm run test:ui` for the Vitest/Testing Library suite. If a change touches `site/`, also run its independent `npm run format:check`, `npm run check`, `npm test`, and `npm run build` commands from `site/`.
+
 The synthetic demo path is available through `npm run demo:seed` and `npm run demo:reset`. It operates only on the generated `app/public/demo-data.json` file. Never place real financial records in the demo fixture, repository, screenshots, or issues.
 
 ## Branches

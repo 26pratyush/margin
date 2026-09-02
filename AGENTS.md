@@ -59,7 +59,7 @@ Project baseline → architecture decisions → local foundation
 → quality and first vertical slice → product website and release preparation
 ```
 
-The current first Epic is `EPIC-001`. Its task briefs use IDs `MARGIN-001` through `MARGIN-009`.
+The foundation and first planning release (`EPIC-001`/`EPIC-002`, `MARGIN-001` through `MARGIN-015`) are complete. The current active product body is `EPIC-003`, whose everyday-tracking and safe-correction work runs through `MARGIN-021`; begin new work from the active GitHub issue and matching task brief rather than restarting the foundation sequence.
 
 ## Branches and Pull Requests
 
@@ -71,6 +71,8 @@ fix/MARGIN-012-negative-balance-display
 docs/MARGIN-004-local-setup
 chore/MARGIN-007-ci-checks
 ```
+
+Codex desktop branches use the `codex/` prefix by default. Preserve an explicitly requested branch name when one is provided.
 
 Do not push directly to `main` once normal development begins. Keep Pull Requests limited to the linked issue and include:
 

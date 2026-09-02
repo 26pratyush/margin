@@ -24,23 +24,23 @@ The model is framework-independent. React, persistence adapters, and UI componen
 
 Actual entries describe money that has moved or a deliberate balance correction.
 
-| Entry type   | Direction       | Meaning                                                 |
-| ------------ | --------------- | ------------------------------------------------------- |
-| `income`     | Credit          | Salary, bonus, or other money received                  |
-| `expense`    | Debit           | Purchase or bill already paid                           |
-| `investment` | Debit           | Actual investment contribution; not investment advice   |
-| `refund`     | Credit          | Money returned from an expense or investment            |
-| `adjustment` | Credit or debit | Opening balance, reconciliation, or explicit correction |
+| Entry type   | Direction       | Meaning                                                  |
+| ------------ | --------------- | -------------------------------------------------------- |
+| `income`     | Credit          | Salary, bonus, or other money received                   |
+| `expense`    | Debit or credit | Purchase/bill already paid, or non-salary money received |
+| `investment` | Debit           | Actual investment contribution; not investment advice    |
+| `refund`     | Credit          | Money returned from an expense or investment             |
+| `adjustment` | Credit or debit | Opening balance, reconciliation, or explicit correction  |
 
 Each entry contains:
 
 ```text
-id, type, amountMinor, occurredOn, status, categoryId?, source?, note?
+id, type, amountMinor, occurredOn, status, categoryId?, source?, note?, direction?
 commitmentId?, refundOfId?, replacesId?, adjustmentReason?
 createdAt, updatedAt
 ```
 
-Amounts are never negative. Direction is derived from the type except for `adjustment`, which explicitly stores credit or debit direction.
+Amounts are never negative. Direction is derived from the type except for `expense` and `adjustment`, which explicitly store credit or debit direction. Legacy expenses without `direction` retain debit behavior.
 
 Transfers between accounts are deferred until the product supports multiple accounts. They should eventually be paired debit/credit entries with zero net effect on total wealth; they must not be faked as expenses in v0.1.
 
@@ -167,10 +167,10 @@ openingActual
   = sum of active signed ledger entries before start
 
 periodCredits
-  = income + refunds + credit adjustments in the period
+  = income + refunds + credit expenses + credit adjustments in the period
 
 periodDebits
-  = expenses + investments + debit adjustments in the period
+  = debit expenses + investments + debit adjustments in the period
 
 closingActual
   = openingActual + periodCredits - periodDebits
@@ -185,7 +185,8 @@ disposableBalance
 The UI must expose these separately:
 
 - Income
-- Gross expenses
+- Debit expenses (gross spending)
+- Credit expenses (inbound non-salary movement)
 - Refunds
 - Investment outflows
 - Reconciliation/untracked activity
@@ -252,4 +253,4 @@ commitment reserve:     ₹47,500  # with a ₹30,000 reserve
 
 ## Implementation boundary
 
-MARGIN-003 establishes this normative model and its golden examples. MARGIN-004 materializes the TypeScript scaffold. MARGIN-006 implements SQLite persistence, snapshots, versioned JSON import/export, and safe reset. MARGIN-007 adds executable unit/property tests, and MARGIN-008 proves salary, expense, and remaining-balance behavior in the UI.
+MARGIN-003 establishes this normative model and its golden examples. MARGIN-004 materializes the TypeScript scaffold. MARGIN-006 implements SQLite persistence, snapshots, versioned JSON import/export, and safe reset. MARGIN-007 adds executable unit/property tests, MARGIN-008 proves salary, expense, and remaining-balance behavior in the UI, and EPIC-003 adds direction-aware expenses, history, lifecycle, balance sync, and synthetic-preview boundaries without changing the local-first architecture.

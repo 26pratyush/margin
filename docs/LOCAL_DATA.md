@@ -40,13 +40,15 @@ Expense name, category, and note metadata are optional. An amount-only expense i
 
 Expense records use a positive `amountMinor` plus an optional `direction` of `debit` or `credit`. New records persist the direction explicitly and legacy records without it normalize to debit behavior. Debit expenses reduce actual balance and spending totals; credit expenses increase actual balance, remain separate from salary/refund records, and do not settle planned commitments. Corrections preserve and may change this direction through the dedicated correction command.
 
+The Transactions screen exposes lifecycle actions only for active salary and expense entries. Edit sends the full validated correction patch and the entry's `updatedAt` to `POST /api/entries/:id/correct`; the service voids the original and creates an active replacement with lineage. Void sends a required reason to `POST /api/entries/:id/void`; the original remains in history with `status: voided` and is excluded from active calculations. There is no generic posted-entry update or delete route, and synthetic preview mode does not render these actions.
+
 Balance sync is a local write through `POST /api/reconcile` with a canonical `asOf` date, signed `realBalanceMinor`, and optional note. The service compares the entered balance with the current active ledger, creates at most one reconciliation adjustment for a non-zero difference, and stores the snapshot with the adjustment lineage. A zero difference stores a snapshot without an adjustment. Both records are included in JSON backup and restore.
 
 The SQLite migration adds a per-record schema marker to the existing generic `records` table and backfills entry timestamps where needed. Existing entry records retain marker version 1, while planning-cycle records use the current dataset version 3; no second planning-specific database table is introduced.
 
 Restore validates the full file, verifies its integrity digest, checks cross-record references, shows a preview in the browser, creates a local pre-restore recovery snapshot, and replaces the dataset in one SQLite transaction. Invalid files cannot change the current dataset.
 
-The browser provides download and file-picker based restore, so a backup can be saved outside the application, used after clearing browser data, or imported in another browser or machine. Raw SQLite archives are intentionally out of scope for v0.1.0; they add WAL, locking, and schema portability concerns without improving the browser-based recovery path.
+The browser provides download and file-picker based restore, so a backup can be saved outside the application, used after clearing browser data, or imported in another browser or machine. Raw SQLite archives remain intentionally out of scope; they add WAL, locking, and schema portability concerns without improving the browser-based recovery path.
 
 ## First-use guide and synthetic preview
 
