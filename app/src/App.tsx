@@ -489,33 +489,8 @@ function Metric({
   )
 }
 
-function ActivityRow({
-  entry,
-  currency,
-  categories = [],
-}: {
-  entry: Entry
-  currency: string
-  categories?: Dataset['categories']
-}) {
-  const positive = entryIsCredit(entry)
-  return (
-    <div className="activity-row">
-      <div className={`activity-icon ${positive ? 'activity-icon-teal' : ''}`}>
-        <Icon name={positive ? 'arrow' : 'transactions'} size={16} />
-      </div>
-      <div className="activity-copy">
-        <strong>{entryLabel(entry, categories)}</strong>
-        <span>
-          {shortDate(entry.occurredOn)} · {entry.status}
-        </span>
-      </div>
-      <strong className={positive ? 'amount-positive' : 'amount-negative'}>{amountLabel(entry, currency)}</strong>
-    </div>
-  )
-}
-
 const DEFAULT_HISTORY_FILTERS: HistoryQuery = { period: 'this-month', type: 'all', status: 'active' }
+const LATEST_HISTORY_FILTERS: HistoryQuery = { period: 'all', type: 'all', status: 'all' }
 const HISTORY_PERIOD_OPTIONS: Array<{ value: HistoryPeriod; label: string }> = [
   { value: 'today', label: 'Today' },
   { value: 'this-week', label: 'This week' },
@@ -711,11 +686,13 @@ function HistoryEntryRow({
   currency,
   categories,
   onAction,
+  showDate = false,
 }: {
   entry: Entry
   currency: string
   categories: Dataset['categories']
   onAction?: (mode: EntryLifecycleMode, entry: Entry, trigger: HTMLButtonElement) => void
+  showDate?: boolean
 }) {
   const positive = entryIsCredit(entry)
   const voided = entry.status === 'voided'
@@ -726,7 +703,10 @@ function HistoryEntryRow({
       </div>
       <div className="activity-copy">
         <strong>{entryLabel(entry, categories)}</strong>
-        <span>{historyEntryStatusLabel(entry)}</span>
+        <span>
+          {showDate && `${shortDate(entry.occurredOn)} · `}
+          {historyEntryStatusLabel(entry)}
+        </span>
         {entry.type === 'expense' && <small>Category: {entryCategoryLabel(entry, categories)}</small>}
         {entry.replacedById && <small>Replaced by a corrected entry</small>}
       </div>
@@ -759,10 +739,12 @@ function HistorySyncRow({
   snapshot,
   adjustment,
   currency,
+  showDate = false,
 }: {
   snapshot: Extract<HistoryItem, { kind: 'balance-sync' }>['snapshot']
   adjustment?: Entry
   currency: string
+  showDate?: boolean
 }) {
   const signedAmountMinor = adjustment
     ? entryIsCredit(adjustment)
@@ -780,6 +762,7 @@ function HistorySyncRow({
       <div className="activity-copy">
         <strong>Balance sync</strong>
         <span>
+          {showDate && `${shortDate(snapshot.asOf)} · `}
           {detail}
           {snapshot.reviewState === 'needs-review' ? ' · Needs review' : ''}
         </span>
@@ -876,6 +859,8 @@ function HomeView({
   dataset,
   summary,
   health,
+  latestHistory,
+  refreshing,
   latestSnapshot,
   onOpenDemo,
   onNavigate,
@@ -888,6 +873,8 @@ function HomeView({
   dataset: Dataset | null
   summary: Summary | null
   health: Health | null
+  latestHistory: HistoryResponse | null
+  refreshing: boolean
   latestSnapshot?: BalanceSyncSnapshot
   onOpenDemo: () => void
   onNavigate: (route: Route) => void
@@ -902,6 +889,7 @@ function HomeView({
   const currency = dataset?.currency ?? 'INR'
   const hasData = entries.length > 0 || commitments.length > 0
   const actualBalance = summary?.actualBalanceMinor ?? 0
+  const latestItems = latestHistory?.items?.slice(0, 5) ?? []
 
   return (
     <>
@@ -1034,11 +1022,37 @@ function HomeView({
                   <h2>Latest entries</h2>
                   <p>Small details, no clutter.</p>
                 </div>
-                <span className="panel-count">{entries.length}</span>
+                <span className="panel-count">{latestHistory?.summary?.visibleCount ?? 0}</span>
               </div>
-              {entries.slice(0, 5).map((entry) => (
-                <ActivityRow key={entry.id} entry={entry} currency={currency} categories={dataset?.categories} />
-              ))}
+              {refreshing && !latestHistory ? (
+                <div className="history-loading" role="status">
+                  Refreshing latest entries…
+                </div>
+              ) : latestHistory ? (
+                latestItems.map((item) =>
+                  item.kind === 'balance-sync' ? (
+                    <HistorySyncRow
+                      key={`sync-${item.snapshot.id}`}
+                      snapshot={item.snapshot}
+                      adjustment={item.adjustment}
+                      currency={currency}
+                      showDate
+                    />
+                  ) : (
+                    <HistoryEntryRow
+                      key={item.entry.id}
+                      entry={item.entry}
+                      currency={currency}
+                      categories={dataset?.categories ?? []}
+                      showDate
+                    />
+                  ),
+                )
+              ) : (
+                <div className="history-error" role="alert">
+                  Latest entries are temporarily unavailable. Review Transactions after reconnecting.
+                </div>
+              )}
             </section>
             <section className="panel next-panel">
               <div className="next-panel-icon">
@@ -1589,6 +1603,7 @@ function App() {
   const [route, setRoute] = useState<Route>(routeFromHash)
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
+  const [latestHistory, setLatestHistory] = useState<HistoryResponse | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('real')
   const [demoReferenceOn, setDemoReferenceOn] = useState<string | null>(null)
@@ -1617,24 +1632,31 @@ function App() {
     const requestId = workspaceRequestId.current + 1
     workspaceRequestId.current = requestId
     setLoading(true)
+    setLatestHistory(null)
     try {
       if (mode === 'synthetic') {
-        const demo = await request<DemoWorkspaceResponse>('/api/demo')
+        const [demo, nextLatestHistory] = await Promise.all([
+          request<DemoWorkspaceResponse>('/api/demo'),
+          request<HistoryResponse>(historyQueryPath(LATEST_HISTORY_FILTERS, mode)),
+        ])
         if (workspaceRequestId.current !== requestId) return
         setHealth(SYNTHETIC_HEALTH)
         setDataset(demo.dataset)
         setSummary(demo.summary)
+        setLatestHistory(nextLatestHistory)
         setDemoReferenceOn(demo.referenceOn)
       } else {
-        const [nextHealth, nextDataset, nextSummary] = await Promise.all([
+        const [nextHealth, nextDataset, nextSummary, nextLatestHistory] = await Promise.all([
           request<Health>('/api/health'),
           request<Dataset>('/api/dataset'),
           request<Summary>('/api/summary'),
+          request<HistoryResponse>(historyQueryPath(LATEST_HISTORY_FILTERS, mode)),
         ])
         if (workspaceRequestId.current !== requestId) return
         setHealth(nextHealth)
         setDataset(nextDataset)
         setSummary(nextSummary)
+        setLatestHistory(nextLatestHistory)
       }
     } catch (reason) {
       if (workspaceRequestId.current !== requestId) return
@@ -1839,13 +1861,17 @@ function App() {
     workspaceRequestId.current = requestId
     setWorkspaceSwitching('synthetic')
     try {
-      const demo = await request<DemoWorkspaceResponse>('/api/demo')
+      const [demo, nextLatestHistory] = await Promise.all([
+        request<DemoWorkspaceResponse>('/api/demo'),
+        request<HistoryResponse>(historyQueryPath(LATEST_HISTORY_FILTERS, 'synthetic')),
+      ])
       if (workspaceRequestId.current !== requestId) return
       setWorkspaceMode('synthetic')
       setDemoReferenceOn(demo.referenceOn)
       setHealth(SYNTHETIC_HEALTH)
       setDataset(demo.dataset)
       setSummary(demo.summary)
+      setLatestHistory(nextLatestHistory)
       setPlanning(null)
       setTransactionForm(null)
       setNotice({ tone: 'success', text: 'Synthetic preview opened. Your local records were not changed.' })
@@ -1863,10 +1889,11 @@ function App() {
     workspaceRequestId.current = requestId
     setWorkspaceSwitching('real')
     try {
-      const [nextHealth, nextDataset, nextSummary] = await Promise.all([
+      const [nextHealth, nextDataset, nextSummary, nextLatestHistory] = await Promise.all([
         request<Health>('/api/health'),
         request<Dataset>('/api/dataset'),
         request<Summary>('/api/summary'),
+        request<HistoryResponse>(historyQueryPath(LATEST_HISTORY_FILTERS, 'real')),
       ])
       if (workspaceRequestId.current !== requestId) return
       setWorkspaceMode('real')
@@ -1874,6 +1901,7 @@ function App() {
       setHealth(nextHealth)
       setDataset(nextDataset)
       setSummary(nextSummary)
+      setLatestHistory(nextLatestHistory)
       setPlanning(null)
       setNotice({ tone: 'success', text: 'Returned to your local workspace. Synthetic records were discarded.' })
     } catch (reason) {
@@ -2062,6 +2090,8 @@ function App() {
               dataset={dataset}
               summary={summary}
               health={health}
+              latestHistory={latestHistory}
+              refreshing={loading}
               latestSnapshot={latestSnapshot}
               onOpenDemo={() => void openSyntheticDemo()}
               onNavigate={navigate}

@@ -68,7 +68,7 @@ All real writes → domain command → repository → local SQLite
 Synthetic reads → fresh in-memory fixture → domain calculations
 ```
 
-History is a read-only projection over entries and reconciliation snapshots. Its filters and totals never replace the global `/api/summary` calculation. Corrections are atomic void-and-replace commands; standalone void is terminal, and only active entries affect balances. The UI consumes these contracts and never bypasses the service.
+History is a read-only projection over entries and reconciliation snapshots. Its filters and totals never replace the global `/api/summary` calculation. The Overview `Latest entries` panel uses the all-time, all-status projection as a five-item preview, while Transactions consumes the filtered view. Corrections are atomic void-and-replace commands; standalone void is terminal, and only active entries affect balances. The UI consumes these contracts and never bypasses the service.
 
 ## Domain model direction
 

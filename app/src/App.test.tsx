@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App, { latestSalary, TransactionActions } from './App'
@@ -31,6 +31,21 @@ const emptySummary = {
   disposableBalanceMinor: 0,
   entryCount: 0,
   activeEntryCount: 0,
+}
+
+const emptyHistory = {
+  range: { period: 'all', startOn: null, endOn: null },
+  filters: { period: 'all', type: 'all', status: 'all' },
+  items: [],
+  summary: {
+    visibleCount: 0,
+    activeCount: 0,
+    voidedCount: 0,
+    syncCount: 0,
+    creditsMinor: 0,
+    debitsMinor: 0,
+    netMovementMinor: 0,
+  },
 }
 
 const demoDataset = {
@@ -123,6 +138,7 @@ function stubAppFetch() {
     if (path.endsWith('/api/health')) body = { status: 'ok', storage: 'sqlite', databaseFile: 'margin.sqlite' }
     else if (path.endsWith('/api/dataset')) body = emptyDataset
     else if (path.endsWith('/api/summary')) body = emptySummary
+    else if (path.includes('/api/history')) body = emptyHistory
     else if (path.endsWith('/api/demo')) {
       body = {
         mode: 'synthetic',
@@ -210,6 +226,96 @@ describe('transaction page actions', () => {
       occurredOn: todayCivilDate(),
       source: 'Salary',
     })
+  })
+})
+
+describe('Overview latest entries', () => {
+  it('uses the newest history projection instead of raw dataset order', async () => {
+    const staleEntries = Array.from({ length: 5 }, (_, index) => ({
+      id: `stale-${index}`,
+      type: 'expense' as const,
+      amountMinor: 100 + index,
+      occurredOn: `2026-08-0${index + 1}`,
+      status: 'active' as const,
+      createdAt: `2026-08-0${index + 1}T10:00:00.000Z`,
+      name: `Older record ${index + 1}`,
+    }))
+    const newestEntry = {
+      id: 'newest-entry',
+      type: 'expense' as const,
+      amountMinor: 999,
+      occurredOn: '2026-10-05',
+      status: 'active' as const,
+      createdAt: '2026-10-05T10:00:00.000Z',
+      name: 'Newest record',
+    }
+    const adjustment = {
+      id: 'sync-adjustment',
+      type: 'adjustment' as const,
+      amountMinor: 50,
+      occurredOn: '2026-10-04',
+      status: 'active' as const,
+      createdAt: '2026-10-04T09:00:00.000Z',
+      direction: 'credit' as const,
+      adjustmentReason: 'reconciliation',
+    }
+    const dataset = {
+      ...emptyDataset,
+      exportedAt: '2026-10-05T12:00:00.000Z',
+      entries: [...staleEntries, adjustment, newestEntry],
+    }
+    const latestHistory = {
+      range: { period: 'all', startOn: null, endOn: null },
+      filters: { period: 'all', type: 'all', status: 'all' },
+      items: [
+        { kind: 'entry' as const, entry: newestEntry },
+        {
+          kind: 'balance-sync' as const,
+          snapshot: {
+            id: 'sync-1',
+            asOf: '2026-10-04',
+            createdAt: '2026-10-04T09:01:00.000Z',
+            calculatedActualBalanceMinor: 1000,
+            realBalanceMinor: 1050,
+            differenceMinor: 50,
+            adjustmentEntryId: adjustment.id,
+          },
+          adjustment,
+        },
+        ...staleEntries.map((entry) => ({ kind: 'entry' as const, entry })),
+      ],
+      summary: {
+        visibleCount: 7,
+        activeCount: 7,
+        voidedCount: 0,
+        syncCount: 1,
+        creditsMinor: 50,
+        debitsMinor: 1509,
+        netMovementMinor: -1459,
+      },
+    }
+    const fetchMock = vi.fn((input: unknown) => {
+      const path = String(input)
+      let body: unknown = {}
+      if (path.endsWith('/api/health')) body = { status: 'ok', storage: 'sqlite', databaseFile: 'margin.sqlite' }
+      else if (path.endsWith('/api/dataset')) body = dataset
+      else if (path.endsWith('/api/summary')) body = { ...emptySummary, entryCount: 7, activeEntryCount: 7 }
+      else if (path.includes('/api/history')) body = latestHistory
+      return Promise.resolve({ ok: true, json: async () => body })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<App />)
+
+    const panel = (await screen.findByRole('heading', { name: 'Latest entries' })).closest('section')
+    expect(panel).not.toBeNull()
+    expect(await within(panel as HTMLElement).findByText('Newest record')).toBeInTheDocument()
+    expect(within(panel as HTMLElement).getByText('Balance sync')).toBeInTheDocument()
+    expect(within(panel as HTMLElement).queryByText('Older record 5')).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/history?period=all&type=all&status=all'),
+      expect.objectContaining({ headers: expect.any(Object) }),
+    )
   })
 })
 
