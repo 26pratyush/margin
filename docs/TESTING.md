@@ -141,6 +141,16 @@ Privacy result: no real financial data, credentials, external API, hosted persis
 
 Documentation result: a repository-wide Markdown audit covered the root/app/site READMEs, architecture and deployment boundaries, project context/roadmap/tracking/task briefs, contribution and GitHub workflow guidance, Wiki pages, privacy guidance, and release records. Current v0.2.0 behavior and release status are now reflected consistently; v0.1.0 acceptance/release records and the one-time bootstrap checklist are explicitly labelled historical. `npm run format:check`, `git diff --check`, the root quality gate, and the independent site gate passed after the documentation updates.
 
+### MARGIN-029 Overview latest-entry freshness review record
+
+Verification date: 2026-10-05
+Branch: `fix/MARGIN-029-overview-latest-entries`
+Runtime: Node.js 26.5.0, npm 11.17.0, synthetic test fixtures only
+Automated result: `npm run quality` passed with 81 service tests, 54 UI tests, TypeScript validation, lint, formatting, production build, and service coverage at 94.00% lines, 83.21% branches, and 97.69% functions.
+Overview result: the Overview now reads the all-time/all-status `/api/history` projection and renders its first five items using the existing history ordering and entry/sync presentation. A regression fixture with deliberately non-chronological dataset order confirmed that the newest entry and balance-sync item are shown instead of the first raw records.
+Safety result: dataset, global summary, backup, mutation, and demo boundaries remain unchanged. Refreshes update dataset, summary, and latest-history state together; no SQLite records are deleted or rewritten by the preview fix.
+Privacy result: no real financial data, credentials, external API, hosted persistence, schema migration, or backup-format change was introduced.
+
 ## Coverage policy
 
 The current service coverage floors are intentionally modest but regression-oriented:
