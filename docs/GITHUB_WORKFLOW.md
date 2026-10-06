@@ -1,5 +1,10 @@
 # GitHub workflow
 
+The [developer preflight and evidence contract](DEVELOPER_PREFLIGHT.md) is the
+canonical source for command order, focused reruns, correction boundaries,
+Pull Request evidence, and release evidence. This document describes the
+repository workflow at a higher level; it must not contradict that contract.
+
 ## Source of truth
 
 GitHub is the project system of record for:
@@ -43,6 +48,12 @@ Issue → branch → local checks → Pull Request → review → main
 ```
 
 Branch names should include the issue key, for example `feat/MARGIN-008-salary-expense-balance`.
+
+Before opening a Pull Request, run the focused checks relevant to the change and
+then `npm run quality`. Run the independent `site/` gate for site-related
+changes. Preserve unrelated worktree changes, use synthetic data only, and
+include exact command results, scope, privacy/backup impact, limitations, and
+follow-up issues in the Pull Request.
 
 ## Project views
 

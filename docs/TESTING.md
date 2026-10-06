@@ -1,5 +1,10 @@
 # Testing and quality gates
 
+The [developer preflight and evidence contract](DEVELOPER_PREFLIGHT.md) is the
+canonical source for the required check order, failure ownership, focused
+reruns, safe corrections, and evidence requirements. The commands and test
+boundaries below are the current implementation of that contract.
+
 Margin keeps quality checks local, deterministic, and runnable in GitHub Actions with the same npm commands.
 
 ## Commands
@@ -17,6 +22,12 @@ npm run quality         # Run the complete local quality gate
 
 `npm run quality` is the local pre-PR command. It runs formatting, linting, service tests with coverage thresholds, React component tests, TypeScript validation, and the production build. The `Local app check` workflow runs those same gates on pull requests and pushes to `main`, followed by the synthetic demo seed/reset checks.
 
+While iterating, use the smallest relevant command first (`test:service`,
+`test:ui`, `check`, `build`, or the site command that owns the failure). Before
+requesting review, run the full root gate and record the exact result. Never run
+reset, seed, import, or restore checks against the normal local data directory;
+use a temporary `MARGIN_DATA_DIR` and synthetic values.
+
 The independent product-site gate runs from `site/`:
 
 ```bash
@@ -27,6 +38,24 @@ npm run check
 npm test
 npm run build
 ```
+
+### MARGIN-022 contract verification record
+
+Verification date: 2026-10-06
+Branch: `docs/MARGIN-022-developer-workflow-preflight`
+Validated base: `e1486d08d58c367cd38420e9cdbd6bd4c4063ae2` (`origin/main`)
+Runtime: Node.js 26.5.0, npm 11.17.0
+Root result: locked install passed; `format:check`, `lint`, `test:service`,
+`test:coverage`, `test:ui`, `check`, `build`, and `quality` passed. The full
+quality gate passed with 94.00% service lines, 83.21% branches, and 97.69%
+functions, with 81 service tests and 54 UI tests passing.
+Site result: locked install passed; site `format:check`, `check`, `test`, and
+`build` all passed, with 3 site tests passing.
+Known follow-up: npm reported 3 high-severity root dependency advisories and 2
+high-severity site dependency advisories during install. No dependency changes
+were made; investigation and proportionate remediation belong to MARGIN-026.
+Privacy result: no application data, SQLite files, backups, credentials, or
+tokens were read, changed, or added.
 
 ## Test boundaries
 

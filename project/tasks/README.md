@@ -21,4 +21,5 @@ Each task brief is deliberately concise but contains enough context for a separa
 - [MARGIN-019 — Progressive expense metadata](MARGIN-019-progressive-expense-metadata.md)
 - [MARGIN-020 — First-use guide and synthetic mode](MARGIN-020-first-use-guide-and-synthetic-mode.md)
 - [MARGIN-021 — Everyday-tracking regression review](MARGIN-021-everyday-tracking-regression-review.md)
+- [MARGIN-022 — Developer workflow and preflight contract](MARGIN-022-developer-workflow-and-preflight-contract.md)
 - [MARGIN-029 — Overview latest entries](MARGIN-029-overview-latest-entries.md)
