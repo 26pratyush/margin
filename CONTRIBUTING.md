@@ -18,13 +18,18 @@ npm ci
 npm run dev
 ```
 
-Before opening a Pull Request, run at least:
+Before opening a Pull Request, follow the [developer preflight and evidence
+contract](docs/DEVELOPER_PREFLIGHT.md). At minimum, run:
 
 ```bash
 npm run quality
 ```
 
-The quality command runs formatting, linting, service/domain tests with coverage thresholds, TypeScript validation, and the production build. Keep unit tests separate from storage/HTTP integration tests as described in [Testing and quality gates](docs/TESTING.md).
+The quality command runs formatting, linting, service/domain tests with
+coverage thresholds, UI tests, TypeScript validation, and the production build.
+Use the focused commands in the contract while iterating, then run the full
+gate before requesting review. Keep unit tests separate from storage/HTTP
+integration tests as described in [Testing and quality gates](docs/TESTING.md).
 
 For focused iteration, use `npm run test:service` for the Node service/domain suite and `npm run test:ui` for the Vitest/Testing Library suite. If a change touches `site/`, also run its independent `npm run format:check`, `npm run check`, `npm test`, and `npm run build` commands from `site/`.
 
@@ -50,6 +55,10 @@ Every Pull Request should:
 - Include screenshots for meaningful UI changes.
 - Call out data-model, privacy, or backup implications.
 - Avoid unrelated cleanup.
+
+The contract also defines focused reruns, safe correction boundaries, release
+evidence, and the rule that local SQLite data and backups must never be reset
+or committed as part of normal development.
 
 ## Definition of done
 
