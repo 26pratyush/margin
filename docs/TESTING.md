@@ -20,7 +20,7 @@ npm run test:coverage   # Run tests with enforced service coverage floors
 npm run quality         # Run the complete local quality gate
 ```
 
-`npm run quality` is the local pre-PR command. It runs formatting, linting, service tests with coverage thresholds, React component tests, TypeScript validation, and the production build. The `Local app check` workflow runs those same gates on pull requests and pushes to `main`, followed by the synthetic demo seed/reset checks.
+`npm run quality` is the local pre-PR command. It runs formatting, linting, service tests with coverage thresholds, React component tests, TypeScript validation, and the production build. The `Local app check` workflow runs formatting, linting, service coverage, type-check, build, and synthetic demo seed/reset checks on pull requests and pushes to `main`; the UI suite remains part of the local quality gate.
 
 While iterating, use the smallest relevant command first (`test:service`,
 `test:ui`, `check`, `build`, or the site command that owns the failure). Before
@@ -56,6 +56,31 @@ high-severity site dependency advisories during install. No dependency changes
 were made; investigation and proportionate remediation belong to MARGIN-026.
 Privacy result: no application data, SQLite files, backups, credentials, or
 tokens were read, changed, or added.
+
+### MARGIN-023 repository-aware preflight verification record
+
+Verification date: 2026-10-06
+Branch: `chore/MARGIN-023-repository-aware-preflight`
+Validated base: `c1c0e011b881cf20e16e1e59a6edf4c7c0263763` (`origin/main`)
+Runtime: Node.js 26.5.0, npm 11.17.0
+Focused result: the bundled skill validator was attempted with
+`python3 /Users/prat/.codex/skills/.system/skill-creator/scripts/quick_validate.py SKILLS/preflight`,
+but the host Python environment lacks `PyYAML` (`ModuleNotFoundError: No module named 'yaml'`).
+The validator could not complete without adding an external environment
+dependency; frontmatter and the skill contract were reviewed manually, and
+`git diff --check` passed.
+Root result: `npm run quality` passed with 81 service tests, 54 UI tests,
+TypeScript validation, lint, formatting, production build, and service coverage
+at 93.92% lines, 83.12% branches, and 97.69% functions. The initial sandbox
+attempt was classified as an environment failure because loopback binding was
+blocked; the unchanged rerun with local execution permission passed.
+Site result: not applicable; no `site/` files changed.
+Delegation result: independent Terra architecture/data-safety review and Luna
+command/documentation review were requested read-only; findings were reviewed
+and the schema and documentation corrections were applied locally.
+Privacy result: no application data, SQLite files, backups, credentials, or
+tokens were read, changed, or added. No application, workflow, dependency, or
+finance-data behavior changed.
 
 ## Test boundaries
 
