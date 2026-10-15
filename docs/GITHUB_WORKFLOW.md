@@ -5,6 +5,22 @@ canonical source for command order, focused reruns, correction boundaries,
 Pull Request evidence, and release evidence. This document describes the
 repository workflow at a higher level; it must not contradict that contract.
 
+The active workflow skills are:
+
+- [`SKILLS/issue-management/SKILL.md`](../SKILLS/issue-management/SKILL.md)
+  for preview-first Issue, epic, dependency, blocker, and Project updates.
+- [`SKILLS/pull-request/SKILL.md`](../SKILLS/pull-request/SKILL.md) for
+  issue-linked branch and Pull Request preparation.
+- [`SKILLS/preflight/SKILL.md`](../SKILLS/preflight/SKILL.md) for repository
+  discovery, focused checks, safe correction, and final evidence.
+- [`SKILLS/release/SKILL.md`](../SKILLS/release/SKILL.md) for validated tags
+  and GitHub Releases.
+
+All three GitHub-mutating workflows are preview-first and require explicit
+confirmation immediately before applying the exact proposed mutation. The
+shared [GitHub workflow contract](../SKILLS/GITHUB_WORKFLOW_CONTRACT.md) defines
+their common handoff and safety boundary.
+
 ## Source of truth
 
 GitHub is the project system of record for:

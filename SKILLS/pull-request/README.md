@@ -1,5 +1,9 @@
-# Pull Request skill placeholder
+# Margin Pull Request skill
 
-Future scope: create focused branches and Pull Requests using `.github/PULL_REQUEST_TEMPLATE.md`, link the correct Issue, summarize validation, and avoid unrelated scope.
+The active [`SKILL.md`](SKILL.md) prepares issue-linked branches and Pull
+Requests using `.github/PULL_REQUEST_TEMPLATE.md`, MARGIN-023 preflight
+evidence, and the repository's privacy and local-data boundaries.
 
-When implemented, add `SKILL.md` with the trigger, required context files, preconditions, and expected PR output.
+It is preview-first: pushing a branch or creating/updating a Pull Request
+requires explicit confirmation. Merging is never performed by this skill.
+Shared rules live in the [GitHub workflow contract](../GITHUB_WORKFLOW_CONTRACT.md).

@@ -1,5 +1,10 @@
-# Issue management skill placeholder
+# Margin issue-management skill
 
-Future scope: standardize issue intake, dependency checks, Project status updates, blocker handling, and completion evidence.
+The active [`SKILL.md`](SKILL.md) standardizes Margin Issue intake, dependency
+checks, epic and Project linking, blocker handling, and completion evidence.
+It is preview-first and requires explicit confirmation before any GitHub
+mutation.
 
-When implemented, add `SKILL.md` with the trigger, required context files, GitHub commands, and expected handoff format.
+It consumes the shared [GitHub workflow contract](../GITHUB_WORKFLOW_CONTRACT.md),
+the [developer preflight contract](../../docs/DEVELOPER_PREFLIGHT.md), and
+MARGIN-024.
