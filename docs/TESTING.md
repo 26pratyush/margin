@@ -82,6 +82,34 @@ Privacy result: no application data, SQLite files, backups, credentials, or
 tokens were read, changed, or added. No application, workflow, dependency, or
 finance-data behavior changed.
 
+### MARGIN-024 Issue, Pull Request, and release workflow verification record
+
+Verification date: 2026-10-15
+Branch: `docs/MARGIN-024-issue-pr-release-skills`
+Validated base: `19a8a411b0025f7aa1d18956366bea0a53f0a419` (MARGIN-023)
+Runtime: Node.js 26.5.0, npm 11.17.0
+Root result: `npm run quality` passed with 81 service tests, 54 UI tests,
+TypeScript validation, lint, formatting, production build, and service coverage
+at 93.92% lines, 83.12% branches, and 97.69% functions.
+Skill result: the bundled validator was attempted for all four active skills,
+but the host Python environment lacks `PyYAML`. Manual YAML/frontmatter
+validation passed for `margin-issue-management`, `margin-pull-request`,
+`margin-preflight`, and `margin-release`; local link validation passed for the
+new and updated workflow documents.
+Scenario result: read-only review covered missing context, duplicate open and
+closed Issues, wrong repository/branch, dirty worktrees, failed PR checks,
+missing UI evidence, missing authentication, unmerged PRs, incomplete
+synthetic verification, stale `main`, remote tag collisions, cancelled
+confirmations, and successful previews. Blocked scenarios remained previews
+with no GitHub mutation; successful previews stopped for confirmation.
+Review result: Terra architecture/release-safety review and Luna command/
+documentation review were completed; identified safety and consistency findings
+were corrected, and both final re-reviews passed.
+Site result: not applicable; no site-boundary files changed.
+Privacy result: no application data, SQLite files, backups, credentials, or
+tokens were read, changed, or added. No application, workflow, dependency, or
+finance-data behavior changed.
+
 ## Test boundaries
 
 Tests are separated by the boundary they exercise:

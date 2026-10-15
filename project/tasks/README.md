@@ -23,4 +23,5 @@ Each task brief is deliberately concise but contains enough context for a separa
 - [MARGIN-021 — Everyday-tracking regression review](MARGIN-021-everyday-tracking-regression-review.md)
 - [MARGIN-022 — Developer workflow and preflight contract](MARGIN-022-developer-workflow-and-preflight-contract.md)
 - [MARGIN-023 — Repository-aware preflight and failure-correction guidance](MARGIN-023-repository-aware-preflight.md)
+- [MARGIN-024 — Issue, Pull Request, and release workflow skills](MARGIN-024-issue-pr-release-workflow-skills.md)
 - [MARGIN-029 — Overview latest entries](MARGIN-029-overview-latest-entries.md)
